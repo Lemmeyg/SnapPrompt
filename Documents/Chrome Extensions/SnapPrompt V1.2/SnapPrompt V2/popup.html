@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SnapPrompt Configuration</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: hsl(222.2, 84%, 4.9%);
+            --bg-secondary: hsl(217.2, 32.6%, 17.5%);
+            --text-primary: hsl(210, 40%, 98%);
+            --text-secondary: hsl(215, 20.2%, 65.1%);
+            --accent: hsl(217.2, 91.2%, 59.8%);
+            --success: hsl(142, 76%, 36%);
+            --error: hsl(0, 84%, 60%);
+            --warning: hsl(38, 92%, 50%);
+        }
+
+        body {
+            width: 400px; height: 600px; overflow-y: auto;
+            font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-primary); 
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-secondary);
+            border-radius: 12px;
+            position: relative;
+        }
+
+        /* Gradient pattern background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.06) 0%, transparent 50%),
+                linear-gradient(135deg, 
+                    rgba(59, 130, 246, 0.02) 0%,
+                    rgba(147, 51, 234, 0.02) 25%,
+                    rgba(236, 72, 153, 0.02) 50%,
+                    rgba(59, 130, 246, 0.02) 75%,
+                    rgba(147, 51, 234, 0.02) 100%
+                );
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 8s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        .header {
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.08) 0%, 
+                rgba(255, 255, 255, 0.02) 100%
+            );
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px 20px; 
+            text-align: center; 
+            position: sticky; 
+            top: 0; 
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .header h1 { 
+            font-size: 20px; 
+            font-weight: 600; 
+            background: linear-gradient(135deg, var(--text-primary) 0%, rgba(255, 255, 255, 0.8) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header p { 
+            font-size: 14px; 
+            color: var(--text-secondary); 
+            margin-top: 2px; 
+            font-weight: 300; 
+        }
+
+        .container { padding: 20px; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
+        
+        input, textarea {
+            width: 100%; padding: 10px 12px; 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px; 
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            color: var(--text-primary);
+            font: inherit; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        input:focus, textarea:focus {
+            outline: none; 
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 2px hsl(217.2, 91.2%, 59.8%, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+        input::placeholder, textarea::placeholder { color: var(--text-secondary); }
+        textarea { resize: vertical; min-height: 80px; max-height: 120px; }
+
+        .form-row { display: flex; flex-direction: column; align-items: center; }
+
+        .char-counter {
+            font-size: 12px; color: var(--text-secondary); text-align: right; margin-top: 4px;
+            font-weight: 300;
+        }
+        .char-counter.warning { color: var(--warning); }
+        .char-counter.error { color: var(--error); }
+
+        .btn {
+            border: none; border-radius: 8px; padding: 10px 16px; font: inherit;
+            font-weight: 500; cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .btn:hover::before {
+            opacity: 1;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--text-primary) 0%, hsl(210, 40%, 92%) 100%);
+            color: var(--bg-primary); 
+            width: 170px; height: 40px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .btn-primary:hover:not(:disabled) { 
+            background: linear-gradient(135deg, hsl(210, 40%, 95%) 0%, hsl(210, 40%, 88%) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        }
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        }
+        .btn-primary:disabled {
+            background: var(--bg-secondary); 
+            color: var(--text-secondary); 
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--text-primary) 0%, hsl(210, 40%, 92%) 100%);
+            color: var(--bg-primary); 
+            width: 150px; height: 35px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            margin-top: 8px;
+        }
+        .btn-secondary:hover:not(:disabled) { 
+            background: linear-gradient(135deg, hsl(217.2, 32.6%, 22%) 0%, hsl(217.2, 32.6%, 25%) 100%);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .btn-secondary:active:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning) 0%, hsl(38, 92%, 45%) 100%);
+            color: white; 
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            font-weight: 500;
+            width: 100%; 
+            height: 35px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 8px;
+        }
+        .btn-warning:hover:not(:disabled) { 
+            background: linear-gradient(135deg, hsl(38, 92%, 45%) 0%, hsl(38, 92%, 40%) 100%);
+            border-color: rgba(234, 179, 8, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
+        }
+        .btn-warning:active:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        .btn-feedback-small {
+            padding: 5px 10px;
+            font-size: 12px;
+            min-width: unset;
+            height: auto;
+            margin-top: 8px;
+        }
+
+        .Snapprompt-list { margin-top: 24px; }
+        .Snapprompt-list h3 { 
+            font-size: 16px; 
+            font-weight: 600; 
+            margin-bottom: 12px; 
+        }
+
+        .Snapprompt-item {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px; 
+            padding: 16px; 
+            margin-bottom: 8px; 
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(0);
+        }
+        .Snapprompt-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .Snapprompt-label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            padding-left: 60px;
+        }
+        .Snapprompt-text {
+            font-size: 13px; 
+            color: var(--text-secondary); 
+            line-height: 1.4; 
+            word-break: break-word;
+            font-weight: 300;
+        }
+
+        .delete-btn {
+            position: absolute; top: 12px; right: 12px; 
+            background: linear-gradient(135deg, var(--error) 0%, hsl(0, 84%, 55%) 100%);
+            color: white; border: none; border-radius: 6px; width: 24px; height: 24px;
+            font-size: 14px; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            opacity: 0.7;
+            backdrop-filter: blur(10px);
+        }
+        .delete-btn:hover { 
+            background: linear-gradient(135deg, hsl(0, 84%, 55%) 0%, hsl(0, 84%, 50%) 100%);
+            opacity: 1;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+        .delete-btn:active {
+            transform: scale(1.05);
+        }
+
+        .edit-btn {
+            position: absolute; top: 12px; right: 40px;
+            background: linear-gradient(135deg, var(--warning) 0%, hsl(38, 92%, 45%) 100%);
+            color: white; border: none; border-radius: 6px; width: 24px; height: 24px;
+            font-size: 14px; cursor: pointer; display: flex; align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.7;
+            backdrop-filter: blur(10px);
+        }
+        .edit-btn:hover {
+            background: linear-gradient(135deg, hsl(38, 92%, 45%) 0%, hsl(38, 92%, 40%) 100%);
+            opacity: 1;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(234, 179, 8, 0.4);
+        }
+        .edit-btn:active {
+            transform: scale(1.05);
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 68px;
+            background: linear-gradient(135deg, hsl(217.2, 91.2%, 59.8%) 0%, hsl(217.2, 91.2%, 54.8%) 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.7;
+            backdrop-filter: blur(10px);
+        }
+        .copy-btn:hover {
+            background: linear-gradient(135deg, hsl(217.2, 91.2%, 54.8%) 0%, hsl(217.2, 91.2%, 49.8%) 100%);
+            opacity: 1;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        .copy-btn:active {
+            transform: scale(1.05);
+        }
+
+        .keyboard-shortcut-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.25) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--accent);
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 7px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            font-family: 'Courier New', monospace;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        .Snapprompt-item:hover .keyboard-shortcut-badge {
+            opacity: 1;
+            border-color: rgba(59, 130, 246, 0.5);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.3) 100%);
+        }
+
+        .empty-state {
+            text-align: center; padding: 32px 16px; color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        .empty-state:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        .empty-state-icon { 
+            font-size: 48px; 
+            margin-bottom: 12px; 
+            opacity: 0.6;
+            transition: transform 0.3s ease;
+        }
+        .empty-state:hover .empty-state-icon {
+            transform: scale(1.1);
+        }
+
+        .toast {
+            position: fixed; top: -60px; left: 20px; right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-primary); padding: 12px 16px; border-radius: 8px;
+            font-size: 14px; font-weight: 500; text-align: center; z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        .toast.show { 
+            top: 10px;
+            transform: translateY(0);
+        }
+        .toast.success { 
+            background: linear-gradient(135deg, var(--success) 0%, hsl(142, 76%, 30%) 100%);
+            border-color: hsl(142, 76%, 40%); 
+            color: white; 
+        }
+        .toast.error { 
+            background: linear-gradient(135deg, var(--error) 0%, hsl(0, 84%, 55%) 100%);
+            border-color: hsl(0, 84%, 65%); 
+            color: white; 
+        }
+        .toast.warning { 
+            background: linear-gradient(135deg, var(--warning) 0%, hsl(38, 92%, 45%) 100%);
+            border-color: hsl(38, 92%, 55%); 
+            color: white; 
+        }
+        .toast.info { 
+            background: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(217, 91%, 50%) 100%);
+            border-color: hsl(217, 91%, 60%); 
+            color: white; 
+        }
+
+        .validation-error { 
+            color: var(--error); 
+            font-size: 12px; 
+            margin-top: 4px; 
+            font-weight: 400;
+        }
+        .form-group.error input, .form-group.error textarea {
+            border-color: var(--error); 
+            box-shadow: 0 0 0 2px hsl(0, 84%, 60%, 0.2);
+            background: rgba(220, 38, 38, 0.05);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { 
+            background: rgba(255, 255, 255, 0.05); 
+            border-radius: 4px; 
+        }
+        ::-webkit-scrollbar-thumb { 
+            background: rgba(255, 255, 255, 0.2); 
+            border-radius: 4px; 
+            min-height: 20px;
+            transition: background 0.3s ease;
+        }
+        ::-webkit-scrollbar-thumb:hover { 
+            background: rgba(255, 255, 255, 0.3); 
+        }
+
+        /* Subtle entrance animations */
+        .Snapprompt-item {
+            animation: slideInUp 0.3s ease-out;
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .form-group {
+            animation: fadeIn 0.4s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* What's New Banner Styles */
+        .whats-new-banner {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.15) 100%);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideInDown 0.4s ease-out;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .whats-new-banner.show {
+            display: block;
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .whats-new-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .whats-new-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .whats-new-version {
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .whats-new-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .whats-new-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .whats-new-content {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .whats-new-content ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .whats-new-content li {
+            margin: 4px 0;
+        }
+
+        .whats-new-content strong {
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SnapPrompt</h1>
+        <p>Store your most used prompts</p>
+    </div>
+
+    <div class="container">
+        <div class="toast" id="saveStatus"></div>
+
+        <!-- What's New Banner -->
+        <div class="whats-new-banner" id="whatsNewBanner">
+            <div class="whats-new-header">
+                <div class="whats-new-title">
+                    <span>What's New</span>
+                    <span class="whats-new-version" id="whatsNewVersion"></span>
+                </div>
+                <button class="whats-new-close" id="whatsNewClose" title="Dismiss">×</button>
+            </div>
+            <div class="whats-new-content" id="whatsNewContent">
+                <!-- Content will be injected by JavaScript -->
+            </div>
+        </div>
+
+        <form id="SnappromptForm">
+            <div class="form-group">
+                <label for="SnappromptLabel">Label</label>
+                <input id="SnappromptLabel" placeholder="e.g., Greeting, Signature, etc." maxlength="100" required>
+                <div class="validation-error" id="labelError"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="SnappromptText">Prompt Text</label>
+                <textarea id="SnappromptText" placeholder="Enter the text you want to insert..." maxlength="5000" required></textarea>
+                <div class="char-counter" id="charCounter">0 / 5000</div>
+                <div class="validation-error" id="textError"></div>
+            </div>
+
+            <div class="form-row">
+                <button type="submit" class="btn btn-primary" id="addBtn">Store Prompt</button>
+                <button type="button" class="btn btn-secondary" id="feedbackBtn">Send Feedback</button>
+            </div>
+        </form>
+
+        <div class="Snapprompt-list">
+            <h3>Your Snippets (<span id="SnappromptCount">0</span>/10)</h3>
+            
+            <!-- Recovery button - only shown when there are snippets to recover -->
+            <div id="recoverySection" style="display: none; margin-bottom: 16px;">
+                <button type="button" class="btn btn-warning" id="recoveryBtn" style="width: 100%; font-size: 14px; padding: 8px 16px;">
+                    🔍 Recover Lost Snippets
+                </button>
+            </div>
+            
+            <div id="SnappromptContainer">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-state-icon">📝</div>
+                    <p>No Snapprompts configured yet.<br>Add your first Snapprompt above!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Privacy Notice -->
+        <div style="text-align: center; padding: 16px 0; font-size: 11px; color: var(--text-secondary); opacity: 0.7;">
+            SnapPrompt collects anonymous usage data to improve the extension.<br>
+            No personal content is transmitted. Respects Do Not Track.
+        </div>
+    </div>
+
+    <script src="analytics.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "SnapPrompt",
+  "version": "1.3.0",
+  "description": "Quickly insert pre-configured text snippets into any text field through right-click context menu",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://www.google-analytics.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SnapPrompt - Configure Text Snippets"
+  },
+  "commands": {
+    "snippet-1": {
+      "suggested_key": {"default": "Alt+1"},
+      "description": "Insert text snippet 1"
+    },
+    "snippet-2": {
+      "suggested_key": {"default": "Alt+2"},
+      "description": "Insert text snippet 2"
+    },
+    "snippet-3": {
+      "suggested_key": {"default": "Alt+3"},
+      "description": "Insert text snippet 3"
+    },
+    "snippet-4": {
+      "suggested_key": {"default": "Alt+4"},
+      "description": "Insert text snippet 4"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
