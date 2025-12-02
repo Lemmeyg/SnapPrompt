@@ -9,8 +9,8 @@ class AnalyticsManager {
 
   async initialize() {
     try {
-      // Check Do Not Track setting
-      if (navigator.doNotTrack === '1' || window.doNotTrack === '1') {
+      // Check Do Not Track setting (only check navigator, as window doesn't exist in service workers)
+      if (navigator.doNotTrack === '1') {
         console.log('Analytics disabled: Do Not Track is enabled');
         this.enabled = false;
         return;

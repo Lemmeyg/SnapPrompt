@@ -1,619 +1,1306 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SnapPrompt Configuration</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        :root {
-            --bg-primary: hsl(222.2, 84%, 4.9%);
-            --bg-secondary: hsl(217.2, 32.6%, 17.5%);
-            --text-primary: hsl(210, 40%, 98%);
-            --text-secondary: hsl(215, 20.2%, 65.1%);
-            --accent: hsl(217.2, 91.2%, 59.8%);
-            --success: hsl(142, 76%, 36%);
-            --error: hsl(0, 84%, 60%);
-            --warning: hsl(38, 92%, 50%);
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SnapPrompt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* Reset & Base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        body {
-            width: 400px; height: 600px; overflow-y: auto;
-            font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            color: var(--text-primary); 
-            background: var(--bg-primary);
-            border: 1px solid var(--bg-secondary);
-            border-radius: 12px;
-            position: relative;
-        }
+    html {
+      overflow: hidden;
+    }
 
-        /* Gradient pattern background */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.06) 0%, transparent 50%),
-                linear-gradient(135deg, 
-                    rgba(59, 130, 246, 0.02) 0%,
-                    rgba(147, 51, 234, 0.02) 25%,
-                    rgba(236, 72, 153, 0.02) 50%,
-                    rgba(59, 130, 246, 0.02) 75%,
-                    rgba(147, 51, 234, 0.02) 100%
-                );
-            pointer-events: none;
-            z-index: -1;
-            animation: gradientShift 8s ease-in-out infinite;
-        }
+    :root {
+      /* Background colors */
+      --background: #0a0a0a;
+      --background-secondary: #141414;
+      --background-tertiary: #1a1a1a;
+      --body-bg: #2a2a2a;
 
-        @keyframes gradientShift {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
-        }
+      /* Border colors */
+      --border: #262626;
+      --border-hover: #404040;
 
-        .header {
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.08) 0%, 
-                rgba(255, 255, 255, 0.02) 100%
-            );
-            backdrop-filter: blur(15px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 16px 20px; 
-            text-align: center; 
-            position: sticky; 
-            top: 0; 
-            z-index: 10;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-        .header h1 { 
-            font-size: 20px; 
-            font-weight: 600; 
-            background: linear-gradient(135deg, var(--text-primary) 0%, rgba(255, 255, 255, 0.8) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .header p { 
-            font-size: 14px; 
-            color: var(--text-secondary); 
-            margin-top: 2px; 
-            font-weight: 300; 
-        }
+      /* Text colors */
+      --foreground: #fafafa;
+      --foreground-secondary: #a1a1a1;
+      --foreground-muted: #737373;
 
-        .container { padding: 20px; }
-        
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
-        
-        input, textarea {
-            width: 100%; padding: 10px 12px; 
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px; 
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            color: var(--text-primary);
-            font: inherit; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        input:focus, textarea:focus {
-            outline: none; 
-            border-color: var(--accent);
-            background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 0 2px hsl(217.2, 91.2%, 59.8%, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
-            transform: translateY(-1px);
-        }
-        input::placeholder, textarea::placeholder { color: var(--text-secondary); }
-        textarea { resize: vertical; min-height: 80px; max-height: 120px; }
+      /* Accent colors */
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-muted: rgba(59, 130, 246, 0.1);
 
-        .form-row { display: flex; flex-direction: column; align-items: center; }
+      /* Semantic colors */
+      --success: #22c55e;
+      --destructive: #ef4444;
+      --destructive-hover: #dc2626;
 
-        .char-counter {
-            font-size: 12px; color: var(--text-secondary); text-align: right; margin-top: 4px;
-            font-weight: 300;
-        }
-        .char-counter.warning { color: var(--warning); }
-        .char-counter.error { color: var(--error); }
+      /* Spacing */
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
 
-        .btn {
-            border: none; border-radius: 8px; padding: 10px 16px; font: inherit;
-            font-weight: 500; cursor: pointer; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .btn:hover::before {
-            opacity: 1;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--text-primary) 0%, hsl(210, 40%, 92%) 100%);
-            color: var(--bg-primary); 
-            width: 170px; height: 40px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        .btn-primary:hover:not(:disabled) { 
-            background: linear-gradient(135deg, hsl(210, 40%, 95%) 0%, hsl(210, 40%, 88%) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-        }
-        .btn-primary:active:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-        }
-        .btn-primary:disabled {
-            background: var(--bg-secondary); 
-            color: var(--text-secondary); 
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
-        }
+    /* Light theme */
+    body.light-theme {
+      /* Background colors */
+      --background: #ffffff;
+      --background-secondary: #f8fafc;
+      --background-tertiary: #f1f5f9;
+      --body-bg: #e5e7eb;
 
-        .btn-secondary {
-            background: linear-gradient(135deg, var(--text-primary) 0%, hsl(210, 40%, 92%) 100%);
-            color: var(--bg-primary); 
-            width: 150px; height: 35px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            margin-top: 8px;
-        }
-        .btn-secondary:hover:not(:disabled) { 
-            background: linear-gradient(135deg, hsl(217.2, 32.6%, 22%) 0%, hsl(217.2, 32.6%, 25%) 100%);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-        .btn-secondary:active:not(:disabled) {
-            transform: translateY(-1px);
-        }
+      /* Border colors */
+      --border: #e2e8f0;
+      --border-hover: #cbd5e1;
 
-        .btn-warning {
-            background: linear-gradient(135deg, var(--warning) 0%, hsl(38, 92%, 45%) 100%);
-            color: white; 
-            border: 1px solid rgba(234, 179, 8, 0.3);
-            font-weight: 500;
-            width: 100%; 
-            height: 35px;
-            backdrop-filter: blur(10px);
-            margin-bottom: 8px;
-        }
-        .btn-warning:hover:not(:disabled) { 
-            background: linear-gradient(135deg, hsl(38, 92%, 45%) 0%, hsl(38, 92%, 40%) 100%);
-            border-color: rgba(234, 179, 8, 0.5);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
-        }
-        .btn-warning:active:not(:disabled) {
-            transform: translateY(-1px);
-        }
+      /* Text colors */
+      --foreground: #0f172a;
+      --foreground-secondary: #475569;
+      --foreground-muted: #94a3b8;
 
-        .btn-feedback-small {
-            padding: 5px 10px;
-            font-size: 12px;
-            min-width: unset;
-            height: auto;
-            margin-top: 8px;
-        }
+      /* Accent colors */
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-muted: rgba(59, 130, 246, 0.08);
 
-        .Snapprompt-list { margin-top: 24px; }
-        .Snapprompt-list h3 { 
-            font-size: 16px; 
-            font-weight: 600; 
-            margin-bottom: 12px; 
-        }
+      /* Semantic colors */
+      --success: #10b981;
+      --destructive: #ef4444;
+      --destructive-hover: #dc2626;
+    }
 
-        .Snapprompt-item {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px; 
-            padding: 16px; 
-            margin-bottom: 8px; 
-            position: relative;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: translateY(0);
-        }
-        .Snapprompt-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.15);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--foreground);
+      width: 380px;
+      height: 600px;
+      margin: 0;
+      padding: 8px;
+      overflow: hidden;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      background: var(--body-bg);
+      box-sizing: border-box;
+    }
 
-        .Snapprompt-label {
-            font-weight: 600;
-            margin-bottom: 6px;
-            padding-left: 60px;
-        }
-        .Snapprompt-text {
-            font-size: 13px; 
-            color: var(--text-secondary); 
-            line-height: 1.4; 
-            word-break: break-word;
-            font-weight: 300;
-        }
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
 
-        .delete-btn {
-            position: absolute; top: 12px; right: 12px; 
-            background: linear-gradient(135deg, var(--error) 0%, hsl(0, 84%, 55%) 100%);
-            color: white; border: none; border-radius: 6px; width: 24px; height: 24px;
-            font-size: 14px; cursor: pointer; display: flex; align-items: center;
-            justify-content: center; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            opacity: 0.7;
-            backdrop-filter: blur(10px);
-        }
-        .delete-btn:hover { 
-            background: linear-gradient(135deg, hsl(0, 84%, 55%) 0%, hsl(0, 84%, 50%) 100%);
-            opacity: 1;
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
-        }
-        .delete-btn:active {
-            transform: scale(1.05);
-        }
+    /* Container */
+    .container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--background);
+      border-radius: 16px;
+      overflow: hidden;
+      animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    }
 
-        .edit-btn {
-            position: absolute; top: 12px; right: 40px;
-            background: linear-gradient(135deg, var(--warning) 0%, hsl(38, 92%, 45%) 100%);
-            color: white; border: none; border-radius: 6px; width: 24px; height: 24px;
-            font-size: 14px; cursor: pointer; display: flex; align-items: center;
-            justify-content: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 0.7;
-            backdrop-filter: blur(10px);
-        }
-        .edit-btn:hover {
-            background: linear-gradient(135deg, hsl(38, 92%, 45%) 0%, hsl(38, 92%, 40%) 100%);
-            opacity: 1;
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(234, 179, 8, 0.4);
-        }
-        .edit-btn:active {
-            transform: scale(1.05);
-        }
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, transparent 100%);
+      position: relative;
+    }
 
-        .copy-btn {
-            position: absolute;
-            top: 12px;
-            right: 68px;
-            background: linear-gradient(135deg, hsl(217.2, 91.2%, 59.8%) 0%, hsl(217.2, 91.2%, 54.8%) 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            width: 24px;
-            height: 24px;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 0.7;
-            backdrop-filter: blur(10px);
-        }
-        .copy-btn:hover {
-            background: linear-gradient(135deg, hsl(217.2, 91.2%, 54.8%) 0%, hsl(217.2, 91.2%, 49.8%) 100%);
-            opacity: 1;
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-        .copy-btn:active {
-            transform: scale(1.05);
-        }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-        .keyboard-shortcut-badge {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.25) 100%);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            color: var(--accent);
-            font-size: 10px;
-            font-weight: 600;
-            padding: 3px 7px;
-            border-radius: 4px;
-            letter-spacing: 0.5px;
-            font-family: 'Courier New', monospace;
-            opacity: 0.8;
-            transition: all 0.3s ease;
-        }
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
 
-        .Snapprompt-item:hover .keyboard-shortcut-badge {
-            opacity: 1;
-            border-color: rgba(59, 130, 246, 0.5);
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.3) 100%);
-        }
+    .logo-icon.spin {
+      animation: logoSpin 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
 
-        .empty-state {
-            text-align: center; padding: 32px 16px; color: var(--text-secondary);
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-        .empty-state:hover {
-            background: rgba(255, 255, 255, 0.03);
-            border-color: rgba(255, 255, 255, 0.08);
-        }
-        .empty-state-icon { 
-            font-size: 48px; 
-            margin-bottom: 12px; 
-            opacity: 0.6;
-            transition: transform 0.3s ease;
-        }
-        .empty-state:hover .empty-state-icon {
-            transform: scale(1.1);
-        }
+    @keyframes logoSpin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
-        .toast {
-            position: fixed; top: -60px; left: 20px; right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--text-primary); padding: 12px 16px; border-radius: 8px;
-            font-size: 14px; font-weight: 500; text-align: center; z-index: 1000;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-        .toast.show { 
-            top: 10px;
-            transform: translateY(0);
-        }
-        .toast.success { 
-            background: linear-gradient(135deg, var(--success) 0%, hsl(142, 76%, 30%) 100%);
-            border-color: hsl(142, 76%, 40%); 
-            color: white; 
-        }
-        .toast.error { 
-            background: linear-gradient(135deg, var(--error) 0%, hsl(0, 84%, 55%) 100%);
-            border-color: hsl(0, 84%, 65%); 
-            color: white; 
-        }
-        .toast.warning { 
-            background: linear-gradient(135deg, var(--warning) 0%, hsl(38, 92%, 45%) 100%);
-            border-color: hsl(38, 92%, 55%); 
-            color: white; 
-        }
-        .toast.info { 
-            background: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(217, 91%, 50%) 100%);
-            border-color: hsl(217, 91%, 60%); 
-            color: white; 
-        }
+    .logo-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
 
-        .validation-error { 
-            color: var(--error); 
-            font-size: 12px; 
-            margin-top: 4px; 
-            font-weight: 400;
-        }
-        .form-group.error input, .form-group.error textarea {
-            border-color: var(--error); 
-            box-shadow: 0 0 0 2px hsl(0, 84%, 60%, 0.2);
-            background: rgba(220, 38, 38, 0.05);
-        }
+    .logo-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--foreground);
+      letter-spacing: -0.02em;
+    }
 
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { 
-            background: rgba(255, 255, 255, 0.05); 
-            border-radius: 4px; 
-        }
-        ::-webkit-scrollbar-thumb { 
-            background: rgba(255, 255, 255, 0.2); 
-            border-radius: 4px; 
-            min-height: 20px;
-            transition: background 0.3s ease;
-        }
-        ::-webkit-scrollbar-thumb:hover { 
-            background: rgba(255, 255, 255, 0.3); 
-        }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+    }
 
-        /* Subtle entrance animations */
-        .Snapprompt-item {
-            animation: slideInUp 0.3s ease-out;
-        }
-        
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .form-group {
-            animation: fadeIn 0.4s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
+    .icon-button {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--foreground-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
 
-        /* What's New Banner Styles */
-        .whats-new-banner {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.15) 100%);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-            display: none;
-            animation: slideInDown 0.4s ease-out;
-            position: relative;
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
-        }
+    .icon-button:hover {
+      background: var(--background-tertiary);
+      color: var(--foreground);
+    }
 
-        .whats-new-banner.show {
-            display: block;
-        }
+    .icon-button.settings-btn svg {
+      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
 
-        @keyframes slideInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+    .icon-button.settings-btn:hover svg {
+      transform: rotate(90deg);
+    }
 
-        .whats-new-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
+    .icon-button svg {
+      width: 18px;
+      height: 18px;
+    }
 
-        .whats-new-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    /* Settings Dropdown */
+    .settings-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: var(--background-secondary);
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius-md);
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-8px);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+      overflow: hidden;
+    }
 
-        .whats-new-version {
-            font-size: 12px;
-            color: var(--text-secondary);
-            background: rgba(255, 255, 255, 0.1);
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
+    .settings-dropdown.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
 
-        .whats-new-close {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 20px;
-            cursor: pointer;
-            padding: 0;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      color: var(--foreground-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+    }
 
-        .whats-new-close:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
-        }
+    .dropdown-item:hover {
+      background: var(--background-tertiary);
+      color: var(--foreground);
+    }
 
-        .whats-new-content {
-            color: var(--text-secondary);
-            font-size: 14px;
-            line-height: 1.6;
-        }
+    .dropdown-item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
 
-        .whats-new-content ul {
-            margin: 8px 0;
-            padding-left: 20px;
-        }
+    .dropdown-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
 
-        .whats-new-content li {
-            margin: 4px 0;
-        }
+    /* Theme toggle switch */
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      color: var(--foreground-secondary);
+      font-size: 13px;
+    }
 
-        .whats-new-content strong {
-            color: var(--text-primary);
-        }
-    </style>
+    .theme-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toggle-switch {
+      width: 36px;
+      height: 20px;
+      background: var(--border-hover);
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .toggle-switch.active {
+      background: var(--accent);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .toggle-switch.active::after {
+      transform: translateX(16px);
+    }
+
+    /* Keystroke savings banner */
+    .keystroke-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 20px;
+      background: linear-gradient(90deg, rgba(34, 197, 94, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .keystroke-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .keystroke-text {
+      font-size: 12px;
+      color: var(--foreground-secondary);
+    }
+
+    .keystroke-count {
+      font-weight: 600;
+      color: var(--success);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* What's New Banner */
+    .whats-new-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      background: var(--accent-muted);
+      border-bottom: 1px solid var(--border);
+      max-height: 200px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .whats-new-banner.hidden {
+      max-height: 0;
+      padding: 0 20px;
+      opacity: 0;
+    }
+
+    .banner-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      animation: sparkle 2s ease-in-out infinite;
+    }
+
+    @keyframes sparkle {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      25% { transform: scale(1.1) rotate(-5deg); }
+      50% { transform: scale(1) rotate(0deg); }
+      75% { transform: scale(1.1) rotate(5deg); }
+    }
+
+    .banner-icon svg {
+      width: 16px;
+      height: 16px;
+      color: white;
+    }
+
+    .banner-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .banner-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--foreground);
+      margin-bottom: 4px;
+    }
+
+    .banner-text {
+      font-size: 12px;
+      color: var(--foreground-secondary);
+      line-height: 1.4;
+    }
+
+    .banner-text ul {
+      margin: 4px 0 0 0;
+      padding-left: 16px;
+    }
+
+    .banner-text li {
+      margin: 2px 0;
+    }
+
+    .banner-close {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--foreground-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .banner-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--foreground);
+      transform: rotate(90deg);
+    }
+
+    .banner-close svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Prompts Section - scrollable */
+    .prompts-section {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--background);
+      min-height: 0;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      position: sticky;
+      top: 0;
+      background: var(--background);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--foreground-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .prompt-count {
+      font-size: 11px;
+      color: var(--foreground-muted);
+      background: var(--background-tertiary);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .prompts-list {
+      padding: 8px 12px;
+    }
+
+    /* Prompt Item */
+    .prompt-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      margin-bottom: 4px;
+      position: relative;
+      animation: fadeInUp 0.3s ease-out backwards;
+    }
+
+    .prompt-item:nth-child(1) { animation-delay: 0.05s; }
+    .prompt-item:nth-child(2) { animation-delay: 0.1s; }
+    .prompt-item:nth-child(3) { animation-delay: 0.15s; }
+    .prompt-item:nth-child(4) { animation-delay: 0.2s; }
+    .prompt-item:nth-child(5) { animation-delay: 0.25s; }
+    .prompt-item:nth-child(6) { animation-delay: 0.3s; }
+    .prompt-item:nth-child(7) { animation-delay: 0.35s; }
+    .prompt-item:nth-child(8) { animation-delay: 0.4s; }
+    .prompt-item:nth-child(9) { animation-delay: 0.45s; }
+    .prompt-item:nth-child(10) { animation-delay: 0.5s; }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .prompt-item:hover {
+      background: var(--background-secondary);
+      transform: translateX(4px);
+    }
+
+    .prompt-item.copied {
+      animation: copyFlash 0.6s ease;
+    }
+
+    @keyframes copyFlash {
+      0%, 100% { background: var(--background-secondary); }
+      50% { background: rgba(59, 130, 246, 0.2); box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+    }
+
+    .prompt-item.dragging {
+      opacity: 0.5;
+      transform: scale(0.95);
+    }
+
+    .prompt-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .prompt-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .prompt-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--foreground);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .prompt-shortcut {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      height: 22px;
+      background: var(--background-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--foreground-muted);
+      letter-spacing: 0.02em;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .prompt-item:hover .prompt-shortcut {
+      background: var(--accent-muted);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+      animation: glow 1.5s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 12px rgba(59, 130, 246, 0.3); }
+      50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+    }
+
+    .prompt-preview {
+      font-size: 12px;
+      color: var(--foreground-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.4;
+    }
+
+    /* Action buttons */
+    .prompt-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .prompt-action {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--border-hover);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      opacity: 0.4;
+    }
+
+    .prompt-item:hover .prompt-action {
+      opacity: 1;
+      color: var(--accent);
+      animation: iconGlow 1.5s ease-in-out infinite;
+    }
+
+    @keyframes iconGlow {
+      0%, 100% { filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.3)); }
+      50% { filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.6)); }
+    }
+
+    .prompt-action:hover {
+      background: var(--background-tertiary);
+      transform: scale(1.15);
+    }
+
+    .prompt-action.copy:hover {
+      color: var(--accent);
+    }
+
+    .prompt-action.copy:active svg {
+      animation: copyPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes copyPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    .prompt-action.edit:hover {
+      color: var(--accent);
+    }
+
+    .prompt-action.edit:hover svg {
+      animation: wiggle 0.4s ease;
+    }
+
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-10deg); }
+      75% { transform: rotate(10deg); }
+    }
+
+    .prompt-action.delete:hover {
+      color: var(--destructive);
+    }
+
+    .prompt-action.delete:hover svg {
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
+    }
+
+    .prompt-action svg {
+      width: 14px;
+      height: 14px;
+      transition: transform 0.2s ease;
+    }
+
+    /* Full Prompt Tooltip Overlay */
+    .prompt-tooltip-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      z-index: 2000;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      border-radius: 16px;
+    }
+
+    .prompt-tooltip-overlay.show {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .tooltip-content {
+      position: relative;
+      background: var(--background-secondary);
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      width: 100%;
+      max-width: 340px;
+      max-height: 450px;
+      overflow-y: auto;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .prompt-tooltip-overlay.show .tooltip-content {
+      transform: scale(1);
+    }
+
+    .tooltip-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tooltip-title {
+      font-weight: 600;
+      color: var(--foreground);
+      font-size: 14px;
+    }
+
+    .tooltip-close {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--foreground-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tooltip-close:hover {
+      background: var(--background-tertiary);
+      color: var(--foreground);
+      transform: rotate(90deg);
+    }
+
+    .tooltip-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--foreground-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Create Prompt Toggle */
+    .create-prompt-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 14px 20px;
+      background: var(--background);
+      border: none;
+      border-top: 1px solid var(--border);
+      color: var(--foreground);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .create-prompt-toggle:hover {
+      background: var(--background-secondary);
+    }
+
+    .create-prompt-toggle-text {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .create-prompt-toggle-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .create-prompt-toggle:hover .create-prompt-toggle-icon {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    }
+
+    .create-prompt-toggle.active .create-prompt-toggle-icon {
+      background: var(--destructive);
+    }
+
+    .create-prompt-toggle-icon svg {
+      width: 16px;
+      height: 16px;
+      color: white;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .create-prompt-toggle.active .create-prompt-toggle-icon svg {
+      transform: rotate(45deg);
+    }
+
+    /* Collapsible Form Section */
+    .form-section {
+      max-height: 0;
+      overflow: hidden;
+      background: var(--background-secondary);
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                  padding 0.3s ease;
+    }
+
+    .form-section.open {
+      max-height: 300px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .form-inner {
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+    }
+
+    .form-section.open .form-inner {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--foreground-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--foreground);
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--background-tertiary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      transform: scale(1.01);
+    }
+
+    .form-input::placeholder {
+      color: var(--foreground-muted);
+    }
+
+    textarea.form-input {
+      resize: none;
+      min-height: 72px;
+      line-height: 1.5;
+    }
+
+    .validation-error {
+      color: var(--destructive);
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .btn:active::after {
+      width: 200px;
+      height: 200px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: var(--background);
+      color: var(--foreground-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+      color: var(--foreground);
+      transform: translateY(-1px);
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+      transition: transform 0.2s ease;
+    }
+
+    .btn-primary:hover svg {
+      transform: rotate(90deg);
+    }
+
+    /* Scrollbar styling */
+    .prompts-section::-webkit-scrollbar,
+    .tooltip-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .prompts-section::-webkit-scrollbar-track,
+    .tooltip-content::-webkit-scrollbar-track {
+      background: var(--background-secondary);
+      border-radius: 4px;
+    }
+
+    .prompts-section::-webkit-scrollbar-thumb,
+    .tooltip-content::-webkit-scrollbar-thumb {
+      background: var(--border-hover);
+      border-radius: 4px;
+    }
+
+    .prompts-section::-webkit-scrollbar-thumb:hover,
+    .tooltip-content::-webkit-scrollbar-thumb:hover {
+      background: var(--foreground-muted);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      background: var(--background-secondary);
+      color: var(--foreground);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 1001;
+      backdrop-filter: blur(8px);
+      max-width: 340px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.toast-success {
+      border-left: 3px solid var(--success);
+    }
+
+    .toast.toast-error {
+      border-left: 3px solid var(--destructive);
+    }
+
+    .toast.toast-info {
+      border-left: 3px solid var(--accent);
+    }
+
+    .toast svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      animation: checkPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .toast-success svg {
+      color: var(--success);
+    }
+
+    .toast-error svg {
+      color: var(--destructive);
+    }
+
+    .toast-info svg {
+      color: var(--accent);
+    }
+
+    @keyframes checkPop {
+      0% { transform: scale(0); }
+      100% { transform: scale(1); }
+    }
+
+    /* Empty State */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--foreground-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.6;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .empty-state-text {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+  </style>
 </head>
 <body>
-    <div class="header">
-        <h1>SnapPrompt</h1>
-        <p>Store your most used prompts</p>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <img src="icons/icon48.png" alt="SnapPrompt Logo">
+        </div>
+        <span class="logo-text">SnapPrompt</span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-button settings-btn" id="settingsBtn" title="Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+
+        <!-- Settings Dropdown -->
+        <div class="settings-dropdown" id="settingsDropdown">
+          <button class="dropdown-item" id="feedbackBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Feedback
+          </button>
+          <button class="dropdown-item" id="recoveryBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+              <path d="M21 3v5h-5"/>
+            </svg>
+            Restore Prompts
+          </button>
+          <button class="dropdown-item" id="readmeBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            README
+          </button>
+          <div class="dropdown-divider"></div>
+          <div class="theme-toggle">
+            <div class="theme-toggle-label">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+              </svg>
+              Light Mode
+            </div>
+            <div class="toggle-switch" id="themeToggle"></div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" id="exportBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" x2="12" y1="15" y2="3"/>
+            </svg>
+            Export Prompts
+          </button>
+          <button class="dropdown-item" id="importBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" x2="12" y1="3" y2="15"/>
+            </svg>
+            Import Prompts
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Keystroke savings banner -->
+    <div class="keystroke-banner">
+      <svg class="keystroke-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20V10"/>
+        <path d="M18 20V4"/>
+        <path d="M6 20v-4"/>
+      </svg>
+      <span class="keystroke-text">You've saved <span class="keystroke-count" id="keystrokeCount">0</span> keystrokes (<span id="timeSaved">0 min</span>)</span>
     </div>
 
-    <div class="container">
-        <div class="toast" id="saveStatus"></div>
+    <!-- What's New Banner -->
+    <div class="whats-new-banner hidden" id="whatsNewBanner">
+      <div class="banner-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+        </svg>
+      </div>
+      <div class="banner-content">
+        <div class="banner-title" id="whatsNewVersion">What's New</div>
+        <div class="banner-text" id="whatsNewContent"></div>
+      </div>
+      <button class="banner-close" id="whatsNewClose" title="Dismiss">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/>
+          <path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
 
-        <!-- What's New Banner -->
-        <div class="whats-new-banner" id="whatsNewBanner">
-            <div class="whats-new-header">
-                <div class="whats-new-title">
-                    <span>What's New</span>
-                    <span class="whats-new-version" id="whatsNewVersion"></span>
-                </div>
-                <button class="whats-new-close" id="whatsNewClose" title="Dismiss">×</button>
-            </div>
-            <div class="whats-new-content" id="whatsNewContent">
-                <!-- Content will be injected by JavaScript -->
-            </div>
+    <!-- Prompts List - scrollable section -->
+    <div class="prompts-section">
+      <div class="section-header">
+        <span class="section-title">Saved Prompts</span>
+        <span class="prompt-count" id="SnappromptCount">0/10</span>
+      </div>
+      <div class="prompts-list" id="SnappromptContainer">
+        <!-- Prompts will be dynamically inserted here -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-state-icon">📝</div>
+          <div class="empty-state-text">No prompts yet.<br>Create your first one below!</div>
         </div>
+      </div>
+    </div>
 
+    <!-- Create Prompt Toggle Button -->
+    <button class="create-prompt-toggle" id="createToggle">
+      <span class="create-prompt-toggle-text">Create New Prompt</span>
+      <div class="create-prompt-toggle-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14"/>
+          <path d="M12 5v14"/>
+        </svg>
+      </div>
+    </button>
+
+    <!-- Collapsible Form Section -->
+    <div class="form-section" id="formSection">
+      <div class="form-inner">
         <form id="SnappromptForm">
-            <div class="form-group">
-                <label for="SnappromptLabel">Label</label>
-                <input id="SnappromptLabel" placeholder="e.g., Greeting, Signature, etc." maxlength="100" required>
-                <div class="validation-error" id="labelError"></div>
-            </div>
-
-            <div class="form-group">
-                <label for="SnappromptText">Prompt Text</label>
-                <textarea id="SnappromptText" placeholder="Enter the text you want to insert..." maxlength="5000" required></textarea>
-                <div class="char-counter" id="charCounter">0 / 5000</div>
-                <div class="validation-error" id="textError"></div>
-            </div>
-
-            <div class="form-row">
-                <button type="submit" class="btn btn-primary" id="addBtn">Store Prompt</button>
-                <button type="button" class="btn btn-secondary" id="feedbackBtn">Send Feedback</button>
-            </div>
+          <div class="form-group">
+            <label class="form-label" for="SnappromptLabel">Prompt Title</label>
+            <input type="text" class="form-input" id="SnappromptLabel" placeholder="Give your prompt a name..." maxlength="100">
+            <div class="validation-error" id="labelError"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="SnappromptText">Prompt Text</label>
+            <textarea class="form-input" id="SnappromptText" placeholder="Enter your prompt text..." maxlength="5000"></textarea>
+            <div class="validation-error" id="textError"></div>
+          </div>
+          <div class="form-row">
+            <button type="submit" class="btn btn-primary" id="addBtn">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+                <path d="M12 5v14"/>
+              </svg>
+              Save Prompt
+            </button>
+          </div>
         </form>
-
-        <div class="Snapprompt-list">
-            <h3>Your Snippets (<span id="SnappromptCount">0</span>/10)</h3>
-            
-            <!-- Recovery button - only shown when there are snippets to recover -->
-            <div id="recoverySection" style="display: none; margin-bottom: 16px;">
-                <button type="button" class="btn btn-warning" id="recoveryBtn" style="width: 100%; font-size: 14px; padding: 8px 16px;">
-                    🔍 Recover Lost Snippets
-                </button>
-            </div>
-            
-            <div id="SnappromptContainer">
-                <div class="empty-state" id="emptyState">
-                    <div class="empty-state-icon">📝</div>
-                    <p>No Snapprompts configured yet.<br>Add your first Snapprompt above!</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Privacy Notice -->
-        <div style="text-align: center; padding: 16px 0; font-size: 11px; color: var(--text-secondary); opacity: 0.7;">
-            SnapPrompt collects anonymous usage data to improve the extension.<br>
-            No personal content is transmitted. Respects Do Not Track.
-        </div>
+      </div>
     </div>
+  </div>
 
-    <script src="analytics.js"></script>
-    <script src="popup.js"></script>
+  <!-- Full Prompt Tooltip Overlay -->
+  <div class="prompt-tooltip-overlay" id="tooltipOverlay">
+    <div class="tooltip-content">
+      <div class="tooltip-header">
+        <div class="tooltip-title" id="tooltipTitle">Full Prompt</div>
+        <button class="tooltip-close" id="tooltipClose">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/>
+            <path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="tooltip-text" id="tooltipText"></div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6 9 17l-5-5"/>
+    </svg>
+    <span id="toastMessage">Success!</span>
+  </div>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="importFileInput" accept=".json" style="display: none;">
+
+  <script src="analytics.js"></script>
+  <script src="popup.js"></script>
 </body>
 </html>

@@ -1,23 +1,23 @@
-// Popup script for SnapPrompt Chrome Extension
+// SnapPrompt - Premium Chrome Extension
+// Version 1.3.0 with enhanced UX and drag-to-reorder functionality
 
 class StorageMigrationManager {
     constructor() {
-        this.currentVersion = '1.3.0'; // Should match manifest.json version
+        this.currentVersion = '1.3.0';
         this.storageKey = 'Snapprompts';
         this.versionKey = 'SnappromptsVersion';
     }
 
     async migrateIfNeeded() {
         try {
-            // Get current stored version
             const versionResult = await chrome.storage.sync.get([this.versionKey]);
-            const storedVersion = versionResult[this.versionKey] || '1.0.0'; // Default for old versions
+            const storedVersion = versionResult[this.versionKey] || '1.0.0';
 
             console.log(`Current version: ${this.currentVersion}, Stored version: ${storedVersion}`);
 
-            // Don't run migration on fresh install (defaults handled by background.js)
+            // Don't run migration on fresh install
             if (!versionResult[this.versionKey]) {
-                console.log('Fresh install detected, skipping migration (defaults handled by background)');
+                console.log('Fresh install detected, skipping migration');
                 await chrome.storage.sync.set({ [this.versionKey]: this.currentVersion });
                 return;
             }
@@ -25,8 +25,6 @@ class StorageMigrationManager {
             if (storedVersion !== this.currentVersion) {
                 console.log('Migration needed, starting migration process...');
                 await this.performMigration(storedVersion, this.currentVersion);
-
-                // Update stored version
                 await chrome.storage.sync.set({ [this.versionKey]: this.currentVersion });
                 console.log('Migration completed successfully');
             } else {
@@ -34,34 +32,23 @@ class StorageMigrationManager {
             }
         } catch (error) {
             console.error('Migration error:', error);
-            // Continue with normal operation even if migration fails
         }
     }
 
     async performMigration(fromVersion, toVersion) {
-        // Handle different migration paths based on version changes
         if (this.isVersionOlder(fromVersion, '1.1.0')) {
             await this.migrateTo110(fromVersion);
         }
-        
-        // Add more migration paths for future versions
-        // if (this.isVersionOlder(fromVersion, '1.2.0')) {
-        //     await this.migrateTo120(fromVersion);
-        // }
     }
 
     async migrateTo110(fromVersion) {
         console.log(`Migrating from ${fromVersion} to 1.1.0`);
-        
+
         try {
-            // Try to get data from multiple storage sources
             let snippets = await this.getDataFromMultipleSources();
-            
+
             if (snippets && snippets.length > 0) {
-                // Validate and clean up old data format
                 snippets = this.validateAndCleanSnippets(snippets);
-                
-                // Save to current storage
                 await chrome.storage.sync.set({ [this.storageKey]: snippets });
                 console.log(`Successfully migrated ${snippets.length} snippets`);
             }
@@ -72,17 +59,13 @@ class StorageMigrationManager {
 
     async getDataFromMultipleSources() {
         let allSnippets = [];
-        let foundInSync = false;
-        let foundInLocal = false;
-        
+
         // Try sync storage first
         try {
             const syncResult = await chrome.storage.sync.get([this.storageKey]);
-            const syncSnippets = syncResult[this.storageKey];
-            if (syncSnippets && syncSnippets.length > 0) {
-                console.log(`Found ${syncSnippets.length} snippets in sync storage`);
-                allSnippets = [...allSnippets, ...syncSnippets];
-                foundInSync = true;
+            if (syncResult[this.storageKey]?.length > 0) {
+                console.log(`Found ${syncResult[this.storageKey].length} snippets in sync storage`);
+                allSnippets = [...allSnippets, ...syncResult[this.storageKey]];
             }
         } catch (error) {
             console.log('Sync storage failed, trying local storage...');
@@ -91,100 +74,60 @@ class StorageMigrationManager {
         // Try local storage as fallback
         try {
             const localResult = await chrome.storage.local.get([this.storageKey]);
-            const localSnippets = localResult[this.storageKey];
-            if (localSnippets && localSnippets.length > 0) {
-                console.log(`Found ${localSnippets.length} snippets in local storage`);
-                allSnippets = [...allSnippets, ...localSnippets];
-                foundInLocal = true;
+            if (localResult[this.storageKey]?.length > 0) {
+                console.log(`Found ${localResult[this.storageKey].length} snippets in local storage`);
+                allSnippets = [...allSnippets, ...localResult[this.storageKey]];
             }
         } catch (error) {
             console.log('Local storage also failed');
         }
 
-        // Try to recover from any other potential storage keys
+        // Try alternative keys
         const alternativeKeys = ['snapprompts', 'snippets', 'prompts', 'textSnippets'];
         for (const key of alternativeKeys) {
             try {
                 const result = await chrome.storage.sync.get([key]);
-                if (result[key] && result[key].length > 0) {
+                if (result[key]?.length > 0) {
                     console.log(`Found ${result[key].length} snippets in alternative key: ${key}`);
                     allSnippets = [...allSnippets, ...result[key]];
                 }
             } catch (error) {
-                // Continue to next alternative key
+                // Continue to next key
             }
         }
 
-        // Also check local storage for alternative keys
-        for (const key of alternativeKeys) {
-            try {
-                const result = await chrome.storage.local.get([key]);
-                if (result[key] && result[key].length > 0) {
-                    console.log(`Found ${result[key].length} snippets in local alternative key: ${key}`);
-                    allSnippets = [...allSnippets, ...result[key]];
-                }
-            } catch (error) {
-                // Continue to next alternative key
-            }
-        }
-
-        if (allSnippets.length > 0) {
-            console.log(`Total snippets found across all sources: ${allSnippets.length}`);
-            console.log(`Sources: Sync=${foundInSync}, Local=${foundInLocal}`);
-            return allSnippets;
-        }
-
-        return null;
+        return allSnippets.length > 0 ? allSnippets : null;
     }
 
     validateAndCleanSnippets(snippets) {
         if (!Array.isArray(snippets)) {
-            console.log('Snippets is not an array, converting...');
             snippets = [snippets];
         }
 
-        // First, ensure all snippets have required fields
         const cleanedSnippets = snippets
             .filter(snippet => snippet && typeof snippet === 'object')
-            .map(snippet => {
-                // Ensure required fields exist
-                if (!snippet.id) {
-                    snippet.id = this.generateId();
-                }
-                if (!snippet.label) {
-                    snippet.label = snippet.label || 'Untitled Snippet';
-                }
-                if (!snippet.text) {
-                    snippet.text = snippet.text || '';
-                }
-                if (!snippet.createdAt) {
-                    snippet.createdAt = snippet.createdAt || new Date().toISOString();
-                }
-                if (!snippet.updatedAt) {
-                    snippet.updatedAt = snippet.updatedAt || new Date().toISOString();
-                }
-                
-                return snippet;
-            })
-            .filter(snippet => snippet.text && snippet.text.trim().length > 0);
+            .map(snippet => ({
+                id: snippet.id || this.generateId(),
+                label: snippet.label || 'Untitled Snippet',
+                text: snippet.text || '',
+                createdAt: snippet.createdAt || new Date().toISOString(),
+                updatedAt: snippet.updatedAt || new Date().toISOString()
+            }))
+            .filter(snippet => snippet.text.trim().length > 0);
 
-        // Remove duplicates based on content similarity
+        // Remove duplicates
         const uniqueSnippets = [];
         const seenContent = new Set();
-        
+
         for (const snippet of cleanedSnippets) {
-            // Create a content hash based on label and text
             const contentHash = `${snippet.label.toLowerCase().trim()}:${snippet.text.toLowerCase().trim()}`;
-            
+
             if (!seenContent.has(contentHash)) {
                 seenContent.add(contentHash);
                 uniqueSnippets.push(snippet);
-            } else {
-                console.log(`Removing duplicate snippet: "${snippet.label}"`);
             }
         }
 
-        console.log(`Deduplication: ${cleanedSnippets.length} snippets -> ${uniqueSnippets.length} unique snippets`);
         return uniqueSnippets;
     }
 
@@ -195,7 +138,7 @@ class StorageMigrationManager {
     isVersionOlder(version1, version2) {
         const v1Parts = version1.split('.').map(Number);
         const v2Parts = version2.split('.').map(Number);
-        
+
         for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
             const v1 = v1Parts[i] || 0;
             const v2 = v2Parts[i] || 0;
@@ -206,362 +149,664 @@ class StorageMigrationManager {
     }
 }
 
-class SnapPromptConfig {
+class SnapPromptManager {
     constructor() {
         this.Snapprompts = [];
         this.maxSnippets = 10;
         this.maxTextLength = 5000;
         this.maxLabelLength = 100;
-        this.toastTimeout = null;
+
+        // Easter egg milestones (minutes saved) - customize these messages!
+        this.easterEggs = [
+            { minutes: 5, message: '🌟 Nice start!' },
+            { minutes: 30, message: '🚀 You\'re on a roll!' },
+            { minutes: 60, message: '⭐ That\'s an hour saved!' },
+            { minutes: 120, message: '🏆 Productivity champion!' },
+            { minutes: 300, message: '💎 5 hours saved - incredible!' },
+            { minutes: 600, message: '👑 10 hours saved - you\'re a legend!' },
+            { minutes: 1440, message: '🎉 A full day saved - amazing!' }
+        ];
         this.editingSnappromptId = null;
         this.migrationManager = new StorageMigrationManager();
         this.analytics = null;
+        this.draggedElement = null;
+        this.tooltipTimeout = null;
+        this.isDragging = false;
+        this.lastMouseX = 0;
+        this.lastMouseY = 0;
 
+        // Initialize
         this.initializeElements();
         this.bindEvents();
         this.initializeAnalytics();
         this.initializeWithMigration();
+    }
 
-        // Test Chrome storage availability
-        this.testStorage();
+    initializeElements() {
+        // Form elements
+        this.form = document.getElementById('SnappromptForm');
+        this.labelInput = document.getElementById('SnappromptLabel');
+        this.textInput = document.getElementById('SnappromptText');
+        this.addBtn = document.getElementById('addBtn');
+
+        // Container elements
+        this.SnappromptContainer = document.getElementById('SnappromptContainer');
+        this.emptyState = document.getElementById('emptyState');
+        this.SnappromptCount = document.getElementById('SnappromptCount');
+
+        // UI elements
+        this.toast = document.getElementById('toast');
+        this.toastMessage = document.getElementById('toastMessage');
+        this.labelError = document.getElementById('labelError');
+        this.textError = document.getElementById('textError');
+
+        // Settings dropdown
+        this.settingsBtn = document.getElementById('settingsBtn');
+        this.settingsDropdown = document.getElementById('settingsDropdown');
+        this.feedbackBtn = document.getElementById('feedbackBtn');
+        this.recoveryBtn = document.getElementById('recoveryBtn');
+        this.readmeBtn = document.getElementById('readmeBtn');
+        this.themeToggle = document.getElementById('themeToggle');
+        this.exportBtn = document.getElementById('exportBtn');
+        this.importBtn = document.getElementById('importBtn');
+        this.importFileInput = document.getElementById('importFileInput');
+
+        // Form toggle
+        this.createToggle = document.getElementById('createToggle');
+        this.formSection = document.getElementById('formSection');
+
+        // What's New banner
+        this.whatsNewBanner = document.getElementById('whatsNewBanner');
+        this.whatsNewVersion = document.getElementById('whatsNewVersion');
+        this.whatsNewContent = document.getElementById('whatsNewContent');
+        this.whatsNewClose = document.getElementById('whatsNewClose');
+
+        // Tooltip overlay
+        this.tooltipOverlay = document.getElementById('tooltipOverlay');
+        this.tooltipTitle = document.getElementById('tooltipTitle');
+        this.tooltipText = document.getElementById('tooltipText');
+        this.tooltipClose = document.getElementById('tooltipClose');
+
+        // Keystroke tracking
+        this.keystrokeCount = document.getElementById('keystrokeCount');
+        this.timeSaved = document.getElementById('timeSaved');
+
+        // Logo icon for spin animation
+        this.logoIcon = document.querySelector('.logo-icon');
+    }
+
+    bindEvents() {
+        // Form events
+        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        this.labelInput.addEventListener('input', () => this.clearValidationError('label'));
+        this.textInput.addEventListener('input', () => this.clearValidationError('text'));
+
+        // Settings dropdown events
+        this.settingsBtn.addEventListener('click', (e) => this.toggleSettings(e));
+        this.feedbackBtn.addEventListener('click', () => this.handleFeedback());
+        this.recoveryBtn.addEventListener('click', () => this.handleRecovery());
+        this.readmeBtn.addEventListener('click', () => this.handleReadme());
+        this.themeToggle.addEventListener('click', () => this.toggleTheme());
+        this.exportBtn.addEventListener('click', () => this.exportPrompts());
+        this.importBtn.addEventListener('click', () => this.importFileInput.click());
+        this.importFileInput.addEventListener('change', (e) => this.importPrompts(e));
+
+        // Form toggle
+        this.createToggle.addEventListener('click', () => this.toggleForm());
+
+        // What's New banner
+        this.whatsNewClose.addEventListener('click', () => this.dismissWhatsNew());
+
+        // Tooltip overlay
+        this.tooltipClose.addEventListener('click', () => this.hideTooltip());
+        this.tooltipOverlay.addEventListener('click', (e) => {
+            if (e.target === this.tooltipOverlay) {
+                this.hideTooltip();
+            }
+        });
+
+        // Close settings dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!this.settingsBtn.contains(e.target) && !this.settingsDropdown.contains(e.target)) {
+                this.settingsDropdown.classList.remove('show');
+            }
+        });
     }
 
     async initializeAnalytics() {
         try {
-            // Create analytics instance
             if (typeof AnalyticsManager !== 'undefined') {
                 this.analytics = new AnalyticsManager();
                 await this.analytics.initialize();
+                await this.analytics.trackPopupOpened();
+
+                window.addEventListener('beforeunload', async () => {
+                    await this.analytics.trackPopupClosed();
+                });
             } else {
-                // Dummy analytics if not available
+                // Dummy analytics
                 this.analytics = {
                     trackPopupOpened: async () => {},
+                    trackPopupClosed: async () => {},
                     trackSnippetCreated: async () => {},
                     trackSnippetEdited: async () => {},
                     trackSnippetDeleted: async () => {},
+                    trackSnippetCopied: async () => {},
                     trackRecoveryAttempted: async () => {},
                     trackRecoverySuccessful: async () => {},
-                    trackSnippetCopied: async () => {},
                     trackEvent: async () => {}
                 };
             }
-
-            // Track popup opened
-            await this.analytics.trackPopupOpened();
-
-            // Track popup closed when window unloads
-            window.addEventListener('beforeunload', async () => {
-                await this.analytics.trackPopupClosed();
-            });
         } catch (error) {
-            console.error('Failed to initialize analytics in popup:', error);
+            console.error('Failed to initialize analytics:', error);
         }
     }
 
     async initializeWithMigration() {
         try {
-            // Run migration first
             await this.migrationManager.migrateIfNeeded();
-
-            // Then load snippets normally
             await this.loadSnippets();
-
-            // Check recovery button visibility after loading snippets
-            await this.updateRecoveryButtonVisibility();
-
-            // Check for captured text from context menu
+            await this.loadKeystrokeStats();
             await this.checkForCapturedText();
-
-            // Check and show What's New banner
             await this.checkWhatsNew();
+            await this.loadTheme();
+            this.startLogoAnimation();
         } catch (error) {
             console.error('Initialization error:', error);
-            // Fallback to normal loading
             await this.loadSnippets();
-            // Still check recovery button visibility even after fallback
-            await this.updateRecoveryButtonVisibility();
-            // Still check for captured text
+            await this.loadKeystrokeStats();
             await this.checkForCapturedText();
-            // Try to show What's New even on error
             await this.checkWhatsNew();
+            this.startLogoAnimation();
         }
+    }
+
+    startLogoAnimation() {
+        // Spin once immediately on load
+        this.spinLogo();
+
+        // Then spin every 8 seconds
+        setInterval(() => {
+            this.spinLogo();
+        }, 8000);
+    }
+
+    spinLogo() {
+        if (!this.logoIcon) return;
+
+        // Add spin class
+        this.logoIcon.classList.add('spin');
+
+        // Remove spin class after animation completes (800ms)
+        setTimeout(() => {
+            this.logoIcon.classList.remove('spin');
+        }, 800);
     }
 
     async checkForCapturedText() {
         try {
             const result = await chrome.storage.local.get(['capturedText', 'captureError', 'captureTimestamp']);
-
-            // Check if capture happened recently (within last 5 seconds)
             const now = Date.now();
             const captureAge = result.captureTimestamp ? now - result.captureTimestamp : Infinity;
 
-            if (captureAge > 5000) {
-                // Too old, ignore
-                console.log('Captured text expired, ignoring');
-                return;
-            }
+            if (captureAge > 5000) return;
 
-            // Check for errors first
             if (result.captureError) {
-                console.log('Capture error detected:', result.captureError);
-
-                // Show error toast
-                if (result.captureError === 'No text is selected') {
-                    this.showToast('No text is selected', 'warning');
-                } else if (result.captureError.includes('Maximum')) {
-                    this.showToast('Maximum of 10 Snapprompts reached. Delete a snippet to add new one.', 'error');
-                } else {
-                    this.showToast(result.captureError, 'error');
-                }
-
-                // Clear the error
+                this.showToast(result.captureError, 'error');
                 await chrome.storage.local.remove(['captureError', 'captureTimestamp']);
                 return;
             }
 
-            // Check for captured text
             if (result.capturedText) {
-                console.log('Captured text found, pre-filling form');
-
-                // Pre-fill the text area
                 this.textInput.value = result.capturedText;
-                this.updateCharCounter();
-
-                // Focus on the label input so user can immediately start typing
                 this.labelInput.focus();
-
-                // Show info toast
                 this.showToast('Text captured! Please provide a label.', 'info');
-
-                // Clear the captured text from storage
+                this.openForm();
                 await chrome.storage.local.remove(['capturedText', 'captureTimestamp']);
-
-                console.log('Form pre-filled with captured text');
             }
         } catch (error) {
             console.error('Error checking for captured text:', error);
         }
     }
 
-    async testStorage() {
+    async loadSnippets() {
         try {
-            console.log('Testing Chrome storage...');
-            const testData = { test: 'hello' };
-            await chrome.storage.sync.set(testData);
-            const result = await chrome.storage.sync.get(['test']);
-            console.log('Storage test result:', result);
-            if (result.test === 'hello') {
-                console.log('Chrome storage is working!');
-                await chrome.storage.sync.remove(['test']);
-            } else {
-                console.error('Chrome storage test failed');
-            }
+            const result = await chrome.storage.sync.get([this.migrationManager.storageKey]);
+            this.Snapprompts = result[this.migrationManager.storageKey] || [];
+            console.log(`Loaded ${this.Snapprompts.length} snippets`);
+            this.renderSnippets();
         } catch (error) {
-            console.error('Chrome storage test error:', error);
+            console.error('Error loading snippets:', error);
+            this.Snapprompts = [];
+            this.renderSnippets();
         }
     }
 
-    initializeElements() {
-        this.form = document.getElementById('SnappromptForm');
-        this.labelInput = document.getElementById('SnappromptLabel');
-        this.textInput = document.getElementById('SnappromptText');
-        this.addBtn = document.getElementById('addBtn');
-        this.feedbackBtn = document.getElementById('feedbackBtn');
-        this.recoveryBtn = document.getElementById('recoveryBtn');
-        this.SnappromptContainer = document.getElementById('SnappromptContainer');
-        this.emptyState = document.getElementById('emptyState');
-        this.SnappromptCount = document.getElementById('SnappromptCount');
-        this.recoverySection = document.getElementById('recoverySection');
-        this.charCounter = document.getElementById('charCounter');
-        this.toast = document.getElementById('saveStatus');
-        this.labelError = document.getElementById('labelError');
-        this.textError = document.getElementById('textError');
-        this.whatsNewBanner = document.getElementById('whatsNewBanner');
-        this.whatsNewVersion = document.getElementById('whatsNewVersion');
-        this.whatsNewContent = document.getElementById('whatsNewContent');
-        this.whatsNewClose = document.getElementById('whatsNewClose');
-    }
-
-    bindEvents() {
-        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
-        this.textInput.addEventListener('input', () => this.updateCharCounter());
-        this.labelInput.addEventListener('input', () => this.clearValidationError('label'));
-        this.textInput.addEventListener('input', () => this.clearValidationError('text'));
-        this.feedbackBtn.addEventListener('click', () => this.handleFeedback());
-        this.recoveryBtn.addEventListener('click', () => this.handleRecovery());
-        this.whatsNewClose.addEventListener('click', () => this.dismissWhatsNew());
-    }
-
-    async handleFeedback() {
+    async saveSnippets() {
         try {
-            console.log('Opening feedback form...');
-            await chrome.tabs.create({
-                url: 'https://forms.gle/KjJwTgJt1zKTt2Xv9',
-                active: true
+            await Promise.allSettled([
+                chrome.storage.sync.set({ [this.migrationManager.storageKey]: this.Snapprompts }),
+                chrome.storage.local.set({ [this.migrationManager.storageKey]: this.Snapprompts })
+            ]);
+            console.log('Snippets saved successfully');
+        } catch (error) {
+            console.error('Error saving snippets:', error);
+            throw error;
+        }
+    }
+
+    async loadKeystrokeStats() {
+        try {
+            const result = await chrome.storage.sync.get(['keystrokesUsed', 'lastEasterEggMinutes']);
+            const keystrokes = result.keystrokesUsed || 0;
+            const minutes = Math.round(keystrokes / 200);
+            const lastEasterEggMinutes = result.lastEasterEggMinutes || 0;
+
+            // Update display
+            this.keystrokeCount.textContent = keystrokes.toLocaleString();
+            this.timeSaved.textContent = minutes >= 60
+                ? `${Math.floor(minutes / 60)}h ${minutes % 60}min`
+                : `${minutes} min`;
+
+            // Check for easter egg milestones
+            const milestone = this.easterEggs.find(egg =>
+                minutes >= egg.minutes && egg.minutes > lastEasterEggMinutes
+            );
+
+            if (milestone) {
+                // Show easter egg message
+                this.showToast(milestone.message, 'success');
+                // Save that we've shown this milestone
+                await chrome.storage.sync.set({ lastEasterEggMinutes: milestone.minutes });
+            }
+        } catch (error) {
+            console.error('Error loading keystroke stats:', error);
+        }
+    }
+
+    async trackKeystrokeSavings(snippetText) {
+        try {
+            const keystrokesInSnippet = snippetText.length;
+
+            // Get current keystroke count from storage
+            const result = await chrome.storage.sync.get(['keystrokesUsed', 'lastEasterEggMinutes']);
+            const currentKeystrokes = result.keystrokesUsed || 0;
+            const lastEasterEggMinutes = result.lastEasterEggMinutes || 0;
+
+            // Add the new keystrokes to the total
+            const newTotal = currentKeystrokes + keystrokesInSnippet;
+            await chrome.storage.sync.set({ keystrokesUsed: newTotal });
+
+            // Update display
+            const minutes = Math.round(newTotal / 200);
+            this.keystrokeCount.textContent = newTotal.toLocaleString();
+            this.timeSaved.textContent = minutes >= 60
+                ? `${Math.floor(minutes / 60)}h ${minutes % 60}min`
+                : `${minutes} min`;
+
+            // Check for new easter egg milestone
+            const milestone = this.easterEggs.find(egg =>
+                minutes >= egg.minutes && egg.minutes > lastEasterEggMinutes
+            );
+
+            if (milestone) {
+                this.showToast(milestone.message, 'success');
+                await chrome.storage.sync.set({ lastEasterEggMinutes: milestone.minutes });
+            }
+        } catch (error) {
+            console.error('Error tracking keystroke savings:', error);
+        }
+    }
+
+    renderSnippets() {
+        this.updateSnippetCount();
+
+        if (this.Snapprompts.length === 0) {
+            this.emptyState.style.display = 'flex';
+            return;
+        }
+
+        this.emptyState.style.display = 'none';
+
+        // Render snippets in their current order (user can reorder via drag-and-drop)
+        this.SnappromptContainer.innerHTML = this.Snapprompts.map((snippet, index) =>
+            this.createSnippetHTML(snippet, this.Snapprompts)
+        ).join('');
+
+        this.bindSnippetEvents();
+    }
+
+    createSnippetHTML(Snapprompt, sortedSnippets) {
+        const truncatedText = Snapprompt.text.length > 100
+            ? Snapprompt.text.substring(0, 100) + '...'
+            : Snapprompt.text;
+
+        const snippetIndex = sortedSnippets.findIndex(s => s.id === Snapprompt.id);
+
+        // Only show keyboard shortcuts for first 4 snippets (Chrome limitation)
+        let keyboardShortcut = '';
+        if (snippetIndex >= 0 && snippetIndex < 4) {
+            keyboardShortcut = `Alt+${snippetIndex + 1}`;
+        }
+
+        return `
+            <div class="prompt-item"
+                 data-snapprompt-id="${Snapprompt.id}"
+                 draggable="true">
+                <div class="prompt-header">
+                    <div class="prompt-title-group">
+                        <span class="prompt-title">${this.escapeHtml(Snapprompt.label)}</span>
+                        ${keyboardShortcut ? `<span class="prompt-shortcut">${keyboardShortcut}</span>` : ''}
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="prompt-action copy" data-snapprompt-id="${Snapprompt.id}" title="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                            </svg>
+                        </button>
+                        <button class="prompt-action edit" data-snapprompt-id="${Snapprompt.id}" title="Edit">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
+                            </svg>
+                        </button>
+                        <button class="prompt-action delete" data-snapprompt-id="${Snapprompt.id}" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"/>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                <line x1="10" x2="10" y1="11" y2="17"/>
+                                <line x1="14" x2="14" y1="11" y2="17"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="prompt-preview">${this.escapeHtml(truncatedText)}</div>
+            </div>
+        `;
+    }
+
+    bindSnippetEvents() {
+        // Copy buttons
+        this.SnappromptContainer.querySelectorAll('.prompt-action.copy').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.dataset.snappromptId;
+                this.handleCopy(id);
             });
-            console.log('Feedback form opened successfully');
-        } catch (error) {
-            console.error('Error opening feedback form:', error);
-            this.showToast('Error opening feedback form', 'error');
+        });
+
+        // Edit buttons
+        this.SnappromptContainer.querySelectorAll('.prompt-action.edit').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.dataset.snappromptId;
+                this.handleEdit(id);
+            });
+        });
+
+        // Delete buttons
+        this.SnappromptContainer.querySelectorAll('.prompt-action.delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.dataset.snappromptId;
+                this.deleteSnippet(id);
+            });
+        });
+
+        // Show tooltip on hover (1.5 second delay)
+        this.SnappromptContainer.querySelectorAll('.prompt-item').forEach(item => {
+            item.addEventListener('mouseenter', (e) => {
+                const id = e.currentTarget.dataset.snappromptId;
+                this.scheduleTooltip(id);
+            });
+
+            item.addEventListener('mousemove', (e) => {
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
+            });
+
+            item.addEventListener('mouseleave', () => {
+                this.cancelTooltip();
+            });
+
+            // Drag and drop events
+            item.addEventListener('dragstart', (e) => this.handleDragStart(e));
+            item.addEventListener('dragend', (e) => this.handleDragEnd(e));
+            item.addEventListener('dragover', (e) => this.handleDragOver(e));
+            item.addEventListener('drop', (e) => this.handleDrop(e));
+        });
+    }
+
+    scheduleTooltip(snappromptId) {
+        // Don't show tooltip if currently dragging
+        if (this.isDragging) return;
+
+        this.cancelTooltip();
+        this.tooltipTimeout = setTimeout(() => {
+            this.showTooltipForSnippet(snappromptId);
+        }, 1500);
+    }
+
+    cancelTooltip() {
+        if (this.tooltipTimeout) {
+            clearTimeout(this.tooltipTimeout);
+            this.tooltipTimeout = null;
         }
     }
 
-    async handleRecovery() {
-        try {
-            this.recoveryBtn.disabled = true;
-            this.recoveryBtn.textContent = '🔍 Searching...';
+    showTooltipForSnippet(snappromptId) {
+        const snippet = this.Snapprompts.find(s => s.id === snappromptId);
+        if (!snippet) return;
 
-            // Track recovery attempt
+        this.tooltipTitle.textContent = snippet.label;
+        this.tooltipText.textContent = snippet.text;
+
+        // Show tooltip (centered within popup via CSS flexbox)
+        this.tooltipOverlay.classList.add('show');
+    }
+
+    hideTooltip() {
+        this.tooltipOverlay.classList.remove('show');
+        this.cancelTooltip();
+    }
+
+    // Drag and Drop handlers
+    handleDragStart(e) {
+        this.isDragging = true;
+        this.cancelTooltip(); // Cancel any pending tooltips
+        this.hideTooltip(); // Hide any visible tooltips
+        this.draggedElement = e.currentTarget;
+        e.currentTarget.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+    }
+
+    handleDragEnd(e) {
+        this.isDragging = false;
+        e.currentTarget.classList.remove('dragging');
+
+        // Remove all drag-over indicators
+        this.SnappromptContainer.querySelectorAll('.prompt-item').forEach(item => {
+            item.classList.remove('drag-over');
+        });
+    }
+
+    handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    async handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+
+        if (this.draggedElement !== e.currentTarget) {
+            const draggedId = this.draggedElement.dataset.snappromptId;
+            const droppedOnId = e.currentTarget.dataset.snappromptId;
+
+            const draggedIndex = this.Snapprompts.findIndex(s => s.id === draggedId);
+            const droppedOnIndex = this.Snapprompts.findIndex(s => s.id === droppedOnId);
+
+            if (draggedIndex !== -1 && droppedOnIndex !== -1) {
+                // Reorder array
+                const [draggedItem] = this.Snapprompts.splice(draggedIndex, 1);
+                this.Snapprompts.splice(droppedOnIndex, 0, draggedItem);
+
+                await this.saveSnippets();
+                this.renderSnippets();
+                this.showToast('Prompts reordered', 'success');
+            }
+        }
+
+        return false;
+    }
+
+    async handleCopy(snappromptId) {
+        const snippet = this.Snapprompts.find(s => s.id === snappromptId);
+        if (!snippet) return;
+
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(snippet.text);
+            } else {
+                this.fallbackCopyToClipboard(snippet.text);
+            }
+
+            // Add copy flash animation
+            const promptItem = this.SnappromptContainer.querySelector(`[data-snapprompt-id="${snappromptId}"]`);
+            if (promptItem) {
+                promptItem.classList.add('copied');
+                setTimeout(() => promptItem.classList.remove('copied'), 600);
+            }
+
+            // Track keystroke savings
+            await this.trackKeystrokeSavings(snippet.text);
+
+            this.showToast('Copied to clipboard!', 'success');
+
             if (this.analytics) {
-                await this.analytics.trackRecoveryAttempted();
-            }
-
-            console.log('Starting snippet recovery process...');
-
-            // Try to recover from multiple sources
-            const recoveredSnippets = await this.migrationManager.getDataFromMultipleSources();
-            
-            if (recoveredSnippets && recoveredSnippets.length > 0) {
-                console.log(`Found ${recoveredSnippets.length} total snippets across all storage sources`);
-                console.log('Recovered snippets:', recoveredSnippets.map(s => ({ id: s.id, label: s.label, text: s.text.substring(0, 50) + '...' })));
-                
-                // Validate and clean the recovered snippets
-                const cleanedSnippets = this.migrationManager.validateAndCleanSnippets(recoveredSnippets);
-                console.log(`After validation and deduplication: ${cleanedSnippets.length} snippets`);
-                console.log('Cleaned snippets:', cleanedSnippets.map(s => ({ id: s.id, label: s.label, text: s.text.substring(0, 50) + '...' })));
-                
-                if (cleanedSnippets.length > 0) {
-                    // For recovery, we want to add ALL found snippets, not filter by ID
-                    // This allows recovering deleted snippets even if they had the same ID
-                    console.log(`Recovering ${cleanedSnippets.length} snippets from storage`);
-                    
-                    // Check if any of these snippets already exist in current list (by content, not ID)
-                    console.log('Current snippets in list:', this.Snapprompts.map(s => ({ id: s.id, label: s.label, text: s.text.substring(0, 50) + '...' })));
-                    
-                    const existingContent = new Set();
-                    this.Snapprompts.forEach(s => {
-                        const contentHash = `${s.label.toLowerCase().trim()}:${s.text.toLowerCase().trim()}`;
-                        existingContent.add(contentHash);
-                    });
-                    
-                    const trulyNewSnippets = cleanedSnippets.filter(s => {
-                        const contentHash = `${s.label.toLowerCase().trim()}:${s.text.toLowerCase().trim()}`;
-                        return !existingContent.has(contentHash);
-                    });
-                    
-                    console.log(`Found ${trulyNewSnippets.length} truly new snippets (not duplicates of existing ones)`);
-                    if (trulyNewSnippets.length > 0) {
-                        console.log('New snippets to add:', trulyNewSnippets.map(s => ({ id: s.id, label: s.label, text: s.text.substring(0, 50) + '...' })));
-                    }
-                    
-                    if (trulyNewSnippets.length > 0) {
-                        console.log('Snippets to add:', trulyNewSnippets.map(s => s.label));
-                        this.Snapprompts = [...this.Snapprompts, ...trulyNewSnippets];
-                        await this.saveSnippets();
-                        this.renderSnippets();
-                        this.showToast(`Recovered ${trulyNewSnippets.length} snippets!`, 'success');
-
-                        // Track successful recovery
-                        if (this.analytics) {
-                            await this.analytics.trackRecoverySuccessful(trulyNewSnippets.length);
-                        }
-
-                        // Update recovery button visibility after recovery
-                        await this.updateRecoveryButtonVisibility();
-                    } else {
-                        this.showToast('All found snippets already exist in current list', 'info');
-                    }
-                } else {
-                    this.showToast('No valid snippets found during recovery', 'warning');
-                }
-            } else {
-                this.showToast('No snippets found in any storage location', 'warning');
+                await this.analytics.trackSnippetCopied(true);
             }
         } catch (error) {
-            console.error('Recovery error:', error);
-            this.showToast('Recovery failed - check console for details', 'error');
-        } finally {
-            this.recoveryBtn.disabled = false;
-            this.recoveryBtn.textContent = '🔍 Recover Lost Snippets';
-            // Update recovery button visibility after recovery attempt
-            this.updateRecoveryButtonVisibility();
+            console.error('Error copying to clipboard:', error);
+            this.showToast('Failed to copy', 'error');
+
+            if (this.analytics) {
+                await this.analytics.trackSnippetCopied(false);
+            }
         }
     }
 
-    async updateRecoveryButtonVisibility() {
+    fallbackCopyToClipboard(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+    }
+
+    handleEdit(snappromptId) {
+        const snippet = this.Snapprompts.find(s => s.id === snappromptId);
+        if (snippet) {
+            this.editingSnappromptId = snappromptId;
+            this.labelInput.value = snippet.label;
+            this.textInput.value = snippet.text;
+            this.addBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/>
+                    <path d="M12 5v14"/>
+                </svg>
+                Update Prompt
+            `;
+            this.openForm();
+        }
+    }
+
+    async deleteSnippet(snappromptId) {
+        const index = this.Snapprompts.findIndex(s => s.id === snappromptId);
+        if (index > -1) {
+            this.Snapprompts.splice(index, 1);
+            await this.saveSnippets();
+            this.renderSnippets();
+            this.showToast('Prompt deleted', 'success');
+
+            if (this.analytics) {
+                await this.analytics.trackSnippetDeleted(this.Snapprompts.length);
+            }
+        }
+    }
+
+    async handleSubmit(e) {
+        e.preventDefault();
+
+        if (!this.validateForm()) return;
+
+        const label = this.labelInput.value.trim();
+        const text = this.textInput.value.trim();
+        const isEditing = !!this.editingSnappromptId;
+
+        if (isEditing) {
+            const index = this.Snapprompts.findIndex(s => s.id === this.editingSnappromptId);
+            if (index > -1) {
+                this.Snapprompts[index].label = label;
+                this.Snapprompts[index].text = text;
+                this.Snapprompts[index].updatedAt = new Date().toISOString();
+                this.showToast('Prompt updated!', 'success');
+            }
+        } else {
+            if (this.Snapprompts.length >= this.maxSnippets) {
+                this.showToast('Maximum of 10 prompts reached', 'error');
+                return;
+            }
+
+            const newSnippet = {
+                id: Date.now().toString(),
+                label: label,
+                text: text,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            this.Snapprompts.push(newSnippet);
+            this.showToast('Prompt created!', 'success');
+        }
+
         try {
-            // Check if there are any snippets available to recover
-            const recoverableSnippets = await this.migrationManager.getDataFromMultipleSources();
-            
-            if (recoverableSnippets && recoverableSnippets.length > 0) {
-                console.log(`Found ${recoverableSnippets.length} total recoverable snippets`);
-                
-                // Validate and check if any are new (not already in current snippets)
-                const cleanedSnippets = this.migrationManager.validateAndCleanSnippets(recoverableSnippets);
-                console.log(`After validation: ${cleanedSnippets.length} valid snippets`);
-                
-                // Check if any of these snippets already exist in current list (by content, not ID)
-                const existingContent = new Set();
-                this.Snapprompts.forEach(s => {
-                    const contentHash = `${s.label.toLowerCase().trim()}:${s.text.toLowerCase().trim()}`;
-                    existingContent.add(contentHash);
-                });
-                
-                const trulyNewSnippets = cleanedSnippets.filter(s => {
-                    const contentHash = `${s.label.toLowerCase().trim()}:${s.text.toLowerCase().trim()}`;
-                    return !existingContent.has(contentHash);
-                });
-                
-                console.log(`Found ${trulyNewSnippets.length} truly new snippets not in current list`);
-                
-                if (trulyNewSnippets.length > 0) {
-                    this.recoverySection.style.display = 'block';
-                    console.log(`Recovery button shown - ${trulyNewSnippets.length} snippets available to recover:`, trulyNewSnippets.map(s => s.label));
+            await this.saveSnippets();
+            this.renderSnippets();
+            this.clearForm();
+            this.closeForm();
+
+            if (this.analytics) {
+                if (isEditing) {
+                    await this.analytics.trackSnippetEdited(this.Snapprompts.length);
                 } else {
-                    this.recoverySection.style.display = 'none';
-                    console.log('Recovery button hidden - no new snippets to recover');
+                    await this.analytics.trackSnippetCreated(this.Snapprompts.length);
                 }
-            } else {
-                this.recoverySection.style.display = 'none';
-                console.log('Recovery button hidden - no recoverable snippets found');
             }
         } catch (error) {
-            console.error('Error checking recovery button visibility:', error);
-            this.recoverySection.style.display = 'none';
-        }
-    }
-
-    updateCharCounter() {
-        const length = this.textInput.value.length;
-        this.charCounter.textContent = `${length} / ${this.maxTextLength}`;
-        
-        this.charCounter.className = 'char-counter';
-        if (length > this.maxTextLength * 0.9) {
-            this.charCounter.classList.add('warning');
-        }
-        if (length >= this.maxTextLength) {
-            this.charCounter.classList.add('error');
-        }
-    }
-
-    clearValidationError(field) {
-        if (field === 'label') {
-            this.labelError.textContent = '';
-            this.labelInput.parentElement.classList.remove('error');
-        } else if (field === 'text') {
-            this.textError.textContent = '';
-            this.textInput.parentElement.classList.remove('error');
+            console.error('Failed to save prompt:', error);
+            this.showToast('Failed to save prompt', 'error');
+            if (!isEditing) {
+                this.Snapprompts.pop();
+            }
         }
     }
 
     validateForm() {
         let isValid = true;
-        
-        // Clear previous errors
+
         this.clearValidationError('label');
         this.clearValidationError('text');
 
-        // Validate label
         const label = this.labelInput.value.trim();
         if (!label) {
             this.showValidationError('label', 'Label is required');
@@ -569,12 +814,11 @@ class SnapPromptConfig {
         } else if (label.length > this.maxLabelLength) {
             this.showValidationError('label', `Label must be ${this.maxLabelLength} characters or less`);
             isValid = false;
-        } else if (this.Snapprompts.some(Snapprompt => Snapprompt.label.toLowerCase() === label.toLowerCase() && Snapprompt.id !== this.editingSnappromptId)) {
-            this.showValidationError('label', 'A Snapprompt with this label already exists');
+        } else if (this.Snapprompts.some(s => s.label.toLowerCase() === label.toLowerCase() && s.id !== this.editingSnappromptId)) {
+            this.showValidationError('label', 'A prompt with this label already exists');
             isValid = false;
         }
 
-        // Validate text
         const text = this.textInput.value.trim();
         if (!text) {
             this.showValidationError('text', 'Prompt text is required');
@@ -590,86 +834,16 @@ class SnapPromptConfig {
     showValidationError(field, message) {
         if (field === 'label') {
             this.labelError.textContent = message;
-            this.labelInput.parentElement.classList.add('error');
         } else if (field === 'text') {
             this.textError.textContent = message;
-            this.textInput.parentElement.classList.add('error');
         }
     }
 
-    handleEdit(SnappromptId) {
-        const Snapprompt = this.Snapprompts.find(s => s.id === SnappromptId);
-        if (Snapprompt) {
-            this.editingSnappromptId = SnappromptId;
-            this.labelInput.value = Snapprompt.label;
-            this.textInput.value = Snapprompt.text;
-            this.addBtn.textContent = 'Update Snapprompt';
-            this.updateCharCounter();
-            window.scrollTo(0, 0);
-        }
-    }
-
-    async handleSubmit(e) {
-        e.preventDefault();
-
-        if (!this.validateForm()) {
-            return;
-        }
-
-        const label = this.labelInput.value.trim();
-        const text = this.textInput.value.trim();
-        const isEditing = !!this.editingSnappromptId;
-
-        if (this.editingSnappromptId) {
-            const index = this.Snapprompts.findIndex(s => s.id === this.editingSnappromptId);
-            if (index > -1) {
-                this.Snapprompts[index].label = label;
-                this.Snapprompts[index].text = text;
-                this.showToast('Snapprompt updated successfully!', 'success');
-            } else {
-                this.showToast('Error updating Snapprompt', 'error');
-                return;
-            }
-        } else {
-            if (this.Snapprompts.length >= this.maxSnippets) {
-                this.showToast('Maximum of 10 Snapprompts allowed', 'error');
-                return;
-            }
-
-            const newSnapprompt = {
-                id: Date.now().toString(),
-                label: label,
-                text: text,
-                created: new Date().toISOString()
-            };
-
-            this.Snapprompts.push(newSnapprompt);
-            this.showToast('Snapprompt added successfully!', 'success');
-        }
-
-        try {
-            await this.saveSnippets();
-            this.renderSnippets();
-            this.clearForm();
-
-            // Track analytics
-            if (this.analytics) {
-                if (isEditing) {
-                    await this.analytics.trackSnippetEdited(this.Snapprompts.length);
-                } else {
-                    await this.analytics.trackSnippetCreated(this.Snapprompts.length);
-                }
-            }
-
-            // Update recovery button visibility after adding/updating snippets
-            await this.updateRecoveryButtonVisibility();
-        } catch (error) {
-            console.error('Failed to save Snapprompt:', error);
-            this.showToast('Failed to save Snapprompt', 'error');
-            // If it was a new Snapprompt, remove it
-            if (!isEditing) {
-                this.Snapprompts.pop();
-            }
+    clearValidationError(field) {
+        if (field === 'label') {
+            this.labelError.textContent = '';
+        } else if (field === 'text') {
+            this.textError.textContent = '';
         }
     }
 
@@ -677,348 +851,252 @@ class SnapPromptConfig {
         this.labelInput.value = '';
         this.textInput.value = '';
         this.editingSnappromptId = null;
-        this.addBtn.textContent = 'Store Prompt';
-        this.updateCharCounter();
+        this.addBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+                <path d="M12 5v14"/>
+            </svg>
+            Save Prompt
+        `;
         this.clearValidationError('label');
         this.clearValidationError('text');
     }
 
-    async loadSnippets() {
-        try {
-            // Try multiple storage sources with fallback
-            let snippets = await this.loadFromMultipleSources();
-            
-            if (snippets && snippets.length > 0) {
-                this.Snapprompts = snippets;
-                console.log(`Successfully loaded ${snippets.length} snippets`);
-            } else {
-                this.Snapprompts = [];
-                console.log('No snippets found, starting with empty state');
-            }
-            
-            this.renderSnippets();
-        } catch (error) {
-            console.error('Error loading Snapprompts:', error);
-            this.showToast('Error loading Snapprompts - trying fallback storage', 'warning');
-            
-            // Try fallback to local storage
-            try {
-                const localResult = await chrome.storage.local.get(['Snapprompts']);
-                this.Snapprompts = localResult.Snapprompts || [];
-                console.log('Loaded snippets from fallback storage');
-                this.renderSnippets();
-            } catch (fallbackError) {
-                console.error('Fallback storage also failed:', fallbackError);
-                this.Snapprompts = [];
-                this.renderSnippets();
-                this.showToast('Unable to load snippets - starting fresh', 'error');
-            }
-            
-            // Check recovery button visibility after loading (success or failure)
-            await this.updateRecoveryButtonVisibility();
+    toggleForm() {
+        const isOpen = this.formSection.classList.contains('open');
+
+        if (isOpen) {
+            this.closeForm();
+        } else {
+            this.openForm();
         }
     }
 
-    async loadFromMultipleSources() {
-        // Try sync storage first
-        try {
-            const syncResult = await chrome.storage.sync.get(['Snapprompts']);
-            if (syncResult.Snapprompts && syncResult.Snapprompts.length > 0) {
-                console.log('Found snippets in sync storage');
-                return syncResult.Snapprompts;
-            }
-        } catch (error) {
-            console.log('Sync storage failed, trying alternatives...');
-        }
-
-        // Try local storage as fallback
-        try {
-            const localResult = await chrome.storage.local.get(['Snapprompts']);
-            if (localResult.Snapprompts && localResult.Snapprompts.length > 0) {
-                console.log('Found snippets in local storage');
-                return localResult.Snapprompts;
-            }
-        } catch (error) {
-            console.log('Local storage also failed');
-        }
-
-        // Try alternative storage keys
-        const alternativeKeys = ['snapprompts', 'snippets', 'prompts', 'textSnippets'];
-        for (const key of alternativeKeys) {
-            try {
-                const result = await chrome.storage.sync.get([key]);
-                if (result[key] && result[key].length > 0) {
-                    console.log(`Found snippets in alternative key: ${key}`);
-                    return result[key];
-                }
-            } catch (error) {
-                // Continue to next alternative key
-            }
-        }
-
-        return null;
+    openForm() {
+        this.formSection.classList.add('open');
+        this.createToggle.classList.add('active');
+        setTimeout(() => this.labelInput.focus(), 300);
     }
 
-    async saveSnippets() {
-        try {
-            console.log('Saving Snapprompts:', this.Snapprompts);
-            
-            // Save to both sync and local storage for redundancy
-            const savePromises = [
-                chrome.storage.sync.set({ Snapprompts: this.Snapprompts }),
-                chrome.storage.local.set({ Snapprompts: this.Snapprompts })
-            ];
-            
-            await Promise.allSettled(savePromises);
-            
-            // Check if at least one save was successful
-            const syncResult = await chrome.storage.sync.get(['Snapprompts']);
-            const localResult = await chrome.storage.local.get(['Snapprompts']);
-            
-            if (syncResult.Snapprompts || localResult.Snapprompts) {
-                console.log('Snapprompts saved successfully');
-                this.showToast('Snippets saved successfully', 'success');
-            } else {
-                throw new Error('Failed to save to any storage');
-            }
-        } catch (error) {
-            console.error('Error saving Snapprompts:', error);
-            this.showToast('Error saving Snapprompts - trying local storage only', 'warning');
-            
-            // Try to save to local storage only as fallback
-            try {
-                await chrome.storage.local.set({ Snapprompts: this.Snapprompts });
-                console.log('Saved to local storage as fallback');
-                this.showToast('Snippets saved to local storage only', 'warning');
-            } catch (fallbackError) {
-                console.error('Local storage fallback also failed:', fallbackError);
-                this.showToast('Failed to save snippets', 'error');
-                throw fallbackError;
-            }
-        }
-    }
-
-    renderSnippets() {
-        this.updateSnippetCount();
-
-        if (this.Snapprompts.length === 0) {
-            this.emptyState.style.display = 'block';
-            return;
-        }
-
-        this.emptyState.style.display = 'none';
-
-        // Sort Snapprompts alphabetically by label
-        const sortedSnippets = [...this.Snapprompts].sort((a, b) => 
-            a.label.localeCompare(b.label)
-        );
-
-        this.SnappromptContainer.innerHTML = sortedSnippets.map(Snapprompt => 
-            this.createSnippetHTML(Snapprompt)
-        ).join('');
-
-        this.SnappromptContainer.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const SnappromptId = e.target.dataset.snappromptId;
-                this.handleEdit(SnappromptId);
-            });
-        });
-
-        // Bind copy events
-        this.SnappromptContainer.querySelectorAll('.copy-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const snappromptId = e.target.dataset.snappromptId;
-                this.handleCopy(snappromptId);
-            });
-        });
-
-        // Bind delete events
-        this.SnappromptContainer.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const SnappromptId = e.target.dataset.snappromptId;
-                this.deleteSnippet(SnappromptId);
-            });
-        });
-    }
-
-    createSnippetHTML(Snapprompt) {
-        const truncatedText = Snapprompt.text.length > 100
-            ? Snapprompt.text.substring(0, 100) + '...'
-            : Snapprompt.text;
-
-        // Get the snippet's position in the sorted list to determine keyboard shortcut
-        const sortedSnippets = [...this.Snapprompts].sort((a, b) =>
-            a.label.localeCompare(b.label)
-        );
-        const snippetIndex = sortedSnippets.findIndex(s => s.id === Snapprompt.id);
-
-        // Determine keyboard shortcut (Alt+1 through Alt+4 for positions 0-3)
-        // Chrome only allows 4 keyboard shortcuts maximum
-        let keyboardShortcut = '';
-        if (snippetIndex >= 0 && snippetIndex < 4) {
-            keyboardShortcut = `Alt+${snippetIndex + 1}`;
-        }
-
-        return `
-            <div class="Snapprompt-item">
-                ${keyboardShortcut ? `<div class="keyboard-shortcut-badge">${keyboardShortcut}</div>` : ''}
-                <button class="edit-btn" data-snapprompt-id="${Snapprompt.id}" title="Edit Snapprompt">✂️</button>
-                <button class="copy-btn" data-snapprompt-id="${Snapprompt.id}" title="Copy to clipboard">📋</button>
-                <button class="delete-btn" data-snapprompt-id="${Snapprompt.id}" title="Delete Snapprompt">×</button>
-                <div class="Snapprompt-label">${this.escapeHtml(Snapprompt.label)}</div>
-                <div class="Snapprompt-text ${Snapprompt.text.length > 100 ? 'truncated' : ''}">
-                    ${this.escapeHtml(truncatedText)}
-                </div>
-            </div>
-        `;
-    }
-
-    async handleCopy(snappromptId) {
-        const snapprompt = this.Snapprompts.find(s => s.id === snappromptId);
-        if (!snapprompt) {
-            this.showToast('Snapprompt not found', 'error');
-            return;
-        }
-
-        try {
-            // Try modern clipboard API first
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(snapprompt.text);
-                this.showToast('Copied to clipboard!', 'success');
-
-                // Track analytics
-                if (this.analytics) {
-                    await this.analytics.trackSnippetCopied(true);
-                }
-            } else {
-                // Fallback to execCommand for older browsers
-                const success = this.fallbackCopyToClipboard(snapprompt.text);
-                if (success) {
-                    this.showToast('Copied to clipboard!', 'success');
-
-                    // Track analytics
-                    if (this.analytics) {
-                        await this.analytics.trackSnippetCopied(true);
-                    }
-                } else {
-                    throw new Error('Clipboard API not available');
-                }
-            }
-        } catch (error) {
-            console.error('Error copying to clipboard:', error);
-            this.showToast('Failed to copy to clipboard', 'error');
-
-            // Track analytics failure
-            if (this.analytics) {
-                await this.analytics.trackSnippetCopied(false);
-            }
-        }
-    }
-
-    fallbackCopyToClipboard(text) {
-        // Create a temporary textarea element
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-
-        try {
-            textarea.select();
-            const successful = document.execCommand('copy');
-            document.body.removeChild(textarea);
-            return successful;
-        } catch (error) {
-            document.body.removeChild(textarea);
-            return false;
-        }
-    }
-
-    async deleteSnippet(SnappromptId, silent = false) {
-        const index = this.Snapprompts.findIndex(s => s.id === SnappromptId);
-        if (index > -1) {
-            this.Snapprompts.splice(index, 1);
-            await this.saveSnippets();
-            this.renderSnippets();
-            if (!silent) {
-                this.showToast('Snapprompt deleted', 'success');
-            }
-
-            // Track analytics
-            if (this.analytics) {
-                await this.analytics.trackSnippetDeleted(this.Snapprompts.length);
-            }
-
-            // Update recovery button visibility after deleting snippets
-            await this.updateRecoveryButtonVisibility();
-        }
+    closeForm() {
+        this.formSection.classList.remove('open');
+        this.createToggle.classList.remove('active');
+        this.clearForm();
     }
 
     updateSnippetCount() {
-        this.SnappromptCount.textContent = this.Snapprompts.length;
-
-        // Update add button state
-        if (this.Snapprompts.length >= this.maxSnippets) {
-            this.addBtn.disabled = true;
-            this.addBtn.textContent = 'Maximum reached (10/10)';
-        } else {
-            this.addBtn.disabled = false;
-            this.addBtn.textContent = 'Store Prompt';
-        }
+        this.SnappromptCount.textContent = `${this.Snapprompts.length}/10`;
     }
 
-    // FIXED: This method was causing the vibration!
     showToast(message, type = 'success') {
-        // Clear any existing timeout
-        if (this.toastTimeout) {
-            clearTimeout(this.toastTimeout);
-        }
+        this.toastMessage.textContent = message;
 
-        // Force a single reflow by setting all properties at once
-        requestAnimationFrame(() => {
-            // Set content and initial state
-            this.toast.textContent = message;
-            this.toast.className = `toast ${type}`;
-            
-            // Force layout calculation
-            this.toast.offsetHeight;
-            
-            // Then show it
-            requestAnimationFrame(() => {
-                this.toast.classList.add('show');
-            });
-        });
+        // Remove any existing type classes
+        this.toast.classList.remove('toast-success', 'toast-error', 'toast-info');
 
-        // Hide the toast after 3 seconds
-        this.toastTimeout = setTimeout(() => {
+        // Add the appropriate type class
+        this.toast.classList.add(`toast-${type}`);
+        this.toast.classList.add('show');
+
+        setTimeout(() => {
             this.toast.classList.remove('show');
-            
-            // Clean up after animation completes
-            setTimeout(() => {
-                if (!this.toast.classList.contains('show')) {
-                    this.toast.className = 'toast';
-                    this.toast.textContent = '';
-                }
-            }, 300);
         }, 3000);
     }
 
+    // Settings menu handlers
+    toggleSettings(e) {
+        e.stopPropagation();
+        this.settingsDropdown.classList.toggle('show');
+    }
+
+    async handleFeedback() {
+        try {
+            await chrome.tabs.create({
+                url: 'https://forms.gle/KjJwTgJt1zKTt2Xv9',
+                active: true
+            });
+            this.settingsDropdown.classList.remove('show');
+        } catch (error) {
+            console.error('Error opening feedback form:', error);
+            this.showToast('Error opening feedback form', 'error');
+        }
+    }
+
+    async handleRecovery() {
+        try {
+            this.settingsDropdown.classList.remove('show');
+
+            if (this.analytics) {
+                await this.analytics.trackRecoveryAttempted();
+            }
+
+            const recoveredSnippets = await this.migrationManager.getDataFromMultipleSources();
+
+            if (recoveredSnippets && recoveredSnippets.length > 0) {
+                const cleanedSnippets = this.migrationManager.validateAndCleanSnippets(recoveredSnippets);
+
+                const existingContent = new Set();
+                this.Snapprompts.forEach(s => {
+                    const contentHash = `${s.label.toLowerCase().trim()}:${s.text.toLowerCase().trim()}`;
+                    existingContent.add(contentHash);
+                });
+
+                const newSnippets = cleanedSnippets.filter(s => {
+                    const contentHash = `${s.label.toLowerCase().trim()}:${s.text.toLowerCase().trim()}`;
+                    return !existingContent.has(contentHash);
+                });
+
+                if (newSnippets.length > 0) {
+                    this.Snapprompts = [...this.Snapprompts, ...newSnippets];
+                    await this.saveSnippets();
+                    this.renderSnippets();
+                    this.showToast(`Recovered ${newSnippets.length} prompts!`, 'success');
+
+                    if (this.analytics) {
+                        await this.analytics.trackRecoverySuccessful(newSnippets.length);
+                    }
+                } else {
+                    this.showToast('No new prompts found to recover', 'info');
+                }
+            } else {
+                this.showToast('No prompts found to recover', 'info');
+            }
+        } catch (error) {
+            console.error('Recovery error:', error);
+            this.showToast('Recovery failed', 'error');
+        }
+    }
+
+    async handleReadme() {
+        try {
+            const readmePath = chrome.runtime.getURL('USER_GUIDE.md');
+            await chrome.tabs.create({
+                url: readmePath,
+                active: true
+            });
+            this.settingsDropdown.classList.remove('show');
+        } catch (error) {
+            console.error('Error opening README:', error);
+            this.showToast('README file not found', 'error');
+        }
+    }
+
+    async toggleTheme() {
+        const isActive = this.themeToggle.classList.contains('active');
+
+        if (isActive) {
+            this.themeToggle.classList.remove('active');
+            document.body.classList.remove('light-theme');
+            await chrome.storage.sync.set({ theme: 'dark' });
+        } else {
+            this.themeToggle.classList.add('active');
+            document.body.classList.add('light-theme');
+            await chrome.storage.sync.set({ theme: 'light' });
+        }
+
+        this.showToast(`Switched to ${isActive ? 'dark' : 'light'} mode`, 'success');
+    }
+
+    async loadTheme() {
+        try {
+            const result = await chrome.storage.sync.get(['theme']);
+            if (result.theme === 'light') {
+                this.themeToggle.classList.add('active');
+                document.body.classList.add('light-theme');
+            }
+        } catch (error) {
+            console.error('Error loading theme:', error);
+        }
+    }
+
+    exportPrompts() {
+        try {
+            const dataStr = JSON.stringify(this.Snapprompts, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `snapprompt-backup-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            this.settingsDropdown.classList.remove('show');
+            this.showToast('Prompts exported!', 'success');
+        } catch (error) {
+            console.error('Export error:', error);
+            this.showToast('Export failed', 'error');
+        }
+    }
+
+    async importPrompts(e) {
+        try {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const importedSnippets = JSON.parse(event.target.result);
+
+                    if (!Array.isArray(importedSnippets)) {
+                        throw new Error('Invalid file format');
+                    }
+
+                    const validSnippets = this.migrationManager.validateAndCleanSnippets(importedSnippets);
+
+                    // Merge with existing, avoiding duplicates
+                    const existingContent = new Set();
+                    this.Snapprompts.forEach(s => {
+                        const contentHash = `${s.label.toLowerCase().trim()}:${s.text.toLowerCase().trim()}`;
+                        existingContent.add(contentHash);
+                    });
+
+                    const newSnippets = validSnippets.filter(s => {
+                        const contentHash = `${s.label.toLowerCase().trim()}:${s.text.toLowerCase().trim()}`;
+                        return !existingContent.has(contentHash);
+                    });
+
+                    if (newSnippets.length > 0) {
+                        this.Snapprompts = [...this.Snapprompts, ...newSnippets].slice(0, this.maxSnippets);
+                        await this.saveSnippets();
+                        this.renderSnippets();
+                        this.showToast(`Imported ${newSnippets.length} prompts!`, 'success');
+                    } else {
+                        this.showToast('No new prompts to import', 'info');
+                    }
+                } catch (error) {
+                    console.error('Import parsing error:', error);
+                    this.showToast('Invalid file format', 'error');
+                }
+            };
+
+            reader.readAsText(file);
+            this.settingsDropdown.classList.remove('show');
+            e.target.value = '';
+        } catch (error) {
+            console.error('Import error:', error);
+            this.showToast('Import failed', 'error');
+        }
+    }
+
+    // What's New functionality
     async checkWhatsNew() {
         try {
             const currentVersion = chrome.runtime.getManifest().version;
-
-            // Get What's New status from background
             const response = await chrome.runtime.sendMessage({ action: 'getWhatsNew' });
 
             console.log('What\'s New check:', {
                 currentVersion,
                 lastSeenVersion: response.lastSeenVersion,
-                dismissed: response.whatsNewDismissed
+                whatsNewDismissed: response.whatsNewDismissed,
+                isNewer: this.isNewerVersion(currentVersion, response.lastSeenVersion)
             });
 
-            // Show banner if there's an update and it hasn't been dismissed
-            if (!response.whatsNewDismissed && this.isNewerVersion(currentVersion, response.lastSeenVersion)) {
-                this.showWhatsNew(currentVersion, response.lastSeenVersion);
+            // Only show What's New on updates, not first install (0.0.0 indicates first install)
+            if (!response.whatsNewDismissed &&
+                response.lastSeenVersion !== '0.0.0' &&
+                this.isNewerVersion(currentVersion, response.lastSeenVersion)) {
+                this.showWhatsNew(currentVersion);
             }
         } catch (error) {
             console.error('Error checking What\'s New:', error);
@@ -1038,28 +1116,22 @@ class SnapPromptConfig {
         return false;
     }
 
-    showWhatsNew(currentVersion, previousVersion) {
-        const updates = this.getUpdateContent(currentVersion, previousVersion);
-
-        if (!updates || updates.length === 0) {
-            return;
-        }
+    showWhatsNew(currentVersion) {
+        const updates = this.getUpdateContent(currentVersion);
+        if (!updates || updates.length === 0) return;
 
         this.whatsNewVersion.textContent = `v${currentVersion}`;
         this.whatsNewContent.innerHTML = this.formatUpdateContent(updates);
-        this.whatsNewBanner.classList.add('show');
+        this.whatsNewBanner.classList.remove('hidden');
     }
 
-    getUpdateContent(currentVersion, previousVersion) {
-        // This is where you configure what to show for each version
-        // Returns an array of update items for this version
+    getUpdateContent(currentVersion) {
         const updatesByVersion = {
             '1.2.0': [
-                '<strong>Update Notifications:</strong> From now on, you\'ll be notified about new features and improvements right here in the extension. New Enhancements are coming soon so please leave feedback on features you would like to see',
-
+                '<strong>Update Notifications:</strong> From now on, you\'ll be notified about new features and improvements right here in the extension.'
             ],
             '1.3.0': [
-                '<strong>📋 Copy Button:</strong> Quickly copy from SnapPrompt to your clipboard with one click, so you can paste outside Chrome',
+                '<strong>📋 Copy Button:</strong> Quickly copy from SnapPrompt to your clipboard with one click',
                 '<strong>⌨️ Keyboard Shortcuts:</strong> First 4 snippets get keyboard shortcuts Alt+1 through Alt+4 (alphabetically ordered)',
                 '<strong>✂️ Text Capture:</strong> Right-click any selected text and save it directly as a new snippet',
                 '<strong>🎁 Starter Snippets:</strong> New users get 3 helpful AI prompts to get started',
@@ -1085,12 +1157,10 @@ class SnapPromptConfig {
     async dismissWhatsNew() {
         try {
             await chrome.runtime.sendMessage({ action: 'dismissWhatsNew' });
-            this.whatsNewBanner.classList.remove('show');
-            console.log('What\'s New banner dismissed');
+            this.whatsNewBanner.classList.add('hidden');
         } catch (error) {
             console.error('Error dismissing What\'s New:', error);
-            // Still hide the banner even if the message fails
-            this.whatsNewBanner.classList.remove('show');
+            this.whatsNewBanner.classList.add('hidden');
         }
     }
 
@@ -1101,7 +1171,7 @@ class SnapPromptConfig {
     }
 }
 
-// Initialize the configuration interface when popup loads
+// Initialize the extension when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new SnapPromptConfig();
+    new SnapPromptManager();
 });

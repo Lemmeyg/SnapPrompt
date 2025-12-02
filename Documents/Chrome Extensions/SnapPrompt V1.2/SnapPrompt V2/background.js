@@ -103,6 +103,11 @@ chrome.commands.onCommand.addListener(async (command) => {
       if (tab) {
         const success = await insertSnippetWithRetry(tab.id, Snapprompt, 0);
 
+        // Track keystroke savings
+        if (success) {
+          await trackKeystrokeSavings(Snapprompt.text);
+        }
+
         // Track analytics
         if (analytics) {
           await analytics.trackSnippetInserted('keyboard_shortcut', snippetIndex + 1, success);
@@ -181,7 +186,7 @@ async function initializeContextMenus() {
 // Handle migrations when extension is installed/updated
 async function handleMigration(reason, previousVersion) {
   try {
-    const currentVersion = '1.3.0'; // Should match manifest.json version
+    const currentVersion = '1.4.0'; // Should match manifest.json version
     const versionKey = 'SnappromptsVersion';
 
     console.log(`Migration: ${reason} from ${previousVersion || 'unknown'} to ${currentVersion}`);
@@ -430,6 +435,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       if (Snapprompt) {
         const success = await insertSnippetWithRetry(tab.id, Snapprompt, info.frameId);
 
+        // Track keystroke savings
+        if (success) {
+          await trackKeystrokeSavings(Snapprompt.text);
+        }
+
         // Track analytics
         if (analytics) {
           await analytics.trackSnippetInserted('context_menu', snippetIndex + 1, success);
@@ -557,11 +567,82 @@ async function handleTextCapture(info, tab) {
   }
 }
 
+// Track keystroke savings when a snippet is successfully inserted
+async function trackKeystrokeSavings(snippetText) {
+  try {
+    // Count the number of characters (keystrokes) in the snippet
+    const keystrokesInSnippet = snippetText.length;
+
+    console.log(`Tracking ${keystrokesInSnippet} keystrokes saved`);
+
+    // Get current keystroke count from storage
+    const result = await chrome.storage.sync.get(['keystrokesUsed']);
+    const currentKeystrokes = result.keystrokesUsed || 0;
+
+    // Add the new keystrokes to the total
+    const newTotal = currentKeystrokes + keystrokesInSnippet;
+
+    // Save back to storage
+    await chrome.storage.sync.set({ keystrokesUsed: newTotal });
+
+    console.log(`Total keystrokes saved: ${newTotal} (added ${keystrokesInSnippet})`);
+
+  } catch (error) {
+    console.error('Error tracking keystroke savings:', error);
+    // Don't throw - this shouldn't block snippet insertion
+  }
+}
+
+// Check if content script is ready and inject if needed
+async function ensureContentScript(tabId) {
+  try {
+    // Try to ping the content script
+    const response = await chrome.tabs.sendMessage(tabId, { action: 'ping' });
+    return true; // Content script is ready
+  } catch (error) {
+    console.log('[ensureContentScript] Content script not responding, attempting to inject...');
+
+    // Get tab info to check if we can inject
+    const tab = await chrome.tabs.get(tabId);
+
+    // Check if URL is injectable (not chrome://, chrome-extension://, etc.)
+    if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') ||
+        tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
+      console.error('[ensureContentScript] Cannot inject content script on this page:', tab.url);
+      return false;
+    }
+
+    try {
+      // Inject content script manually
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['content.js']
+      });
+
+      console.log('[ensureContentScript] Content script injected successfully');
+
+      // Wait a moment for initialization
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return true;
+    } catch (injectError) {
+      console.error('[ensureContentScript] Failed to inject content script:', injectError);
+      return false;
+    }
+  }
+}
+
 // Simplified snippet insertion - rely on manifest-injected content script
-async function insertSnippetWithRetry(tabId, Snapprompt, frameId = 0, maxRetries = 2) {
+async function insertSnippetWithRetry(tabId, Snapprompt, frameId = 0, maxRetries = 3) {
   console.log(`[insertSnippetWithRetry] Attempting to send message to tabId: ${tabId}, frameId: ${frameId}`);
   if (!tabId) {
     console.error('[insertSnippetWithRetry] Invalid tabId received.');
+    return false;
+  }
+
+  // Ensure content script is loaded
+  const scriptReady = await ensureContentScript(tabId);
+  if (!scriptReady) {
+    console.error('[insertSnippetWithRetry] Content script could not be loaded');
     return false;
   }
 
@@ -575,11 +656,11 @@ async function insertSnippetWithRetry(tabId, Snapprompt, frameId = 0, maxRetries
         }
       };
       console.log(`[insertSnippetWithRetry] Sending message (attempt ${attempt}):`, messagePayload, `to tabId: ${tabId}, frameId: ${frameId}`);
-      
+
       const response = await chrome.tabs.sendMessage(tabId, messagePayload, { frameId: frameId });
-      
+
       console.log('[insertSnippetWithRetry] Message sent, response received:', response);
-      
+
       if (response && response.success) {
         console.log('[insertSnippetWithRetry] Successfully inserted Snapprompt.');
         return true;
@@ -590,22 +671,22 @@ async function insertSnippetWithRetry(tabId, Snapprompt, frameId = 0, maxRetries
           return false;
         }
       }
-      
+
     } catch (error) {
       console.error(`[insertSnippetWithRetry] Error during message sending (attempt ${attempt}):`, error);
-      
+
       if (error.message.includes('Could not establish connection') && attempt < maxRetries) {
         console.log('[insertSnippetWithRetry] Content script might not be ready, waiting and retrying...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         continue;
       }
-      
+
       if (attempt === maxRetries) {
         console.error('[insertSnippetWithRetry] All attempts failed with errors.');
         return false;
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
+
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
   }
   return false;
@@ -622,10 +703,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === 'getWhatsNew') {
     chrome.storage.local.get(['lastSeenVersion', 'whatsNewDismissed']).then(result => {
-      sendResponse({
+      const response = {
         lastSeenVersion: result.lastSeenVersion || '0.0.0',
         whatsNewDismissed: result.whatsNewDismissed || false
-      });
+      };
+      console.log('getWhatsNew response:', response, 'from storage:', result);
+      sendResponse(response);
     });
     return true; // Will respond asynchronously
   }
@@ -661,13 +744,37 @@ async function handleUpdateNotification(previousVersion) {
 
     console.log(`Extension updated from ${previousVersion || 'unknown'} to ${currentVersion}`);
 
-    // Store the last seen version and reset the dismissed flag
-    await chrome.storage.local.set({
-      lastSeenVersion: previousVersion || '0.0.0',
-      whatsNewDismissed: false
-    });
+    // Only reset whatsNewDismissed if this is an actual version change
+    if (previousVersion && previousVersion !== currentVersion) {
+      // Store the last seen version and reset the dismissed flag
+      await chrome.storage.local.set({
+        lastSeenVersion: previousVersion,
+        whatsNewDismissed: false
+      });
 
-    console.log('Update notification flag set - user will see What\'s New on next popup open');
+      console.log('Update notification flag set - user will see What\'s New on next popup open');
+    } else {
+      console.log('No version change detected (extension reload), keeping existing whatsNewDismissed state');
+
+      // Get current state
+      const result = await chrome.storage.local.get(['whatsNewDismissed', 'lastSeenVersion']);
+
+      // If whatsNewDismissed doesn't exist yet, initialize it based on whether we have a lastSeenVersion
+      if (result.whatsNewDismissed === undefined) {
+        // If lastSeenVersion exists and equals currentVersion, user has already seen this version
+        const shouldDismiss = result.lastSeenVersion === currentVersion;
+        await chrome.storage.local.set({
+          lastSeenVersion: currentVersion,
+          whatsNewDismissed: shouldDismiss
+        });
+        console.log(`Initialized whatsNewDismissed to ${shouldDismiss}`);
+      } else {
+        // Just update lastSeenVersion without changing whatsNewDismissed
+        await chrome.storage.local.set({
+          lastSeenVersion: previousVersion || currentVersion
+        });
+      }
+    }
   } catch (error) {
     console.error('Error setting up update notification:', error);
   }
