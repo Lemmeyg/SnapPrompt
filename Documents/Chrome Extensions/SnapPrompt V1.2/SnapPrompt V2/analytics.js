@@ -6,12 +6,12 @@ class AnalyticsManager {
 
     // Use separate GA4 properties for dev and production
     this.GA_MEASUREMENT_ID = isDevelopment
-      ? 'G-DEV-MEASUREMENT-ID' // TODO: Create separate dev GA4 property
-      : 'G-MG0SCXR3KP'; // Production Measurement ID
+      ? 'G-2CT2KF56CE' // Use same property for dev testing (you can create separate later)
+      : 'G-2CT2KF56CE'; // Production Measurement ID
 
     this.API_SECRET = isDevelopment
-      ? 'DEV_API_SECRET' // TODO: API secret for dev property
-      : 'YOUR_API_SECRET'; // TODO: API secret for production property
+      ? 'Pe5IcwjYQzmBQ8hQC_1T6A' // Use same secret for dev testing
+      : 'Pe5IcwjYQzmBQ8hQC_1T6A'; // Production API secret
 
     this.enabled = false;
     this.clientId = null;
@@ -23,7 +23,7 @@ class AnalyticsManager {
     this.flushTimer = null;
 
     // Keystroke milestone tracking
-    this.milestones = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+    this.milestones = [100, 250, 500, 1000, 2500,5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
     this.achievedMilestones = new Set();
   }
 

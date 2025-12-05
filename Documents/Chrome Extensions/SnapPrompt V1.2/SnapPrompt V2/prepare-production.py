@@ -28,20 +28,25 @@ FILES_TO_EXCLUDE = [
 
 def remove_console_logs(content):
     """Remove console.log statements but keep console.error and console.warn"""
-    # Pattern to match console.log statements (both single and multi-line)
-    # This handles:
-    # - console.log('message');
-    # - console.log('message', var);
-    # - console.log(`template ${var}`);
-    # But preserves console.error and console.warn
+    # Pattern to match console.log statements
+    # Uses a more careful approach to avoid removing actual code
 
-    # Remove standalone console.log lines
-    content = re.sub(r'^\s*console\.log\([^)]*\);?\s*$', '', content, flags=re.MULTILINE)
+    # Remove standalone console.log lines (complete statements on their own line)
+    # This matches: whitespace + console.log + balanced parentheses + optional semicolon + whitespace/newline
+    lines = content.split('\n')
+    cleaned_lines = []
 
-    # Remove inline console.log (more complex pattern for expressions)
-    content = re.sub(r'console\.log\([^;]*\);?', '', content)
+    for line in lines:
+        # Check if line is ONLY a console.log statement (with optional whitespace and semicolon)
+        if re.match(r'^\s*console\.log\(.*\);?\s*$', line) and not ('console.error' in line or 'console.warn' in line):
+            # Skip this line (don't add to cleaned_lines)
+            continue
+        else:
+            cleaned_lines.append(line)
 
-    # Clean up empty lines (max 2 consecutive empty lines)
+    content = '\n'.join(cleaned_lines)
+
+    # Clean up excessive empty lines (max 2 consecutive empty lines)
     content = re.sub(r'\n{3,}', '\n\n', content)
 
     return content
