@@ -48,10 +48,19 @@ let analytics;
       trackInsertionFailed: async () => {},
       trackSnippetCreated: async () => {},
       trackTextCaptured: async () => {},
-      trackEvent: async () => {}
+      trackEvent: async () => {},
+      flushEventsSync: () => {}
     };
   }
 })();
+
+// Service worker suspend handler - flush analytics before suspend
+chrome.runtime.onSuspend.addListener(() => {
+  console.log('Service worker suspending, flushing analytics...');
+  if (analytics && analytics.flushEventsSync) {
+    analytics.flushEventsSync();
+  }
+});
 
 // Initialize context menus when extension starts
 chrome.runtime.onStartup.addListener(initializeContextMenus);
@@ -262,11 +271,9 @@ async function addDefaultSnippets() {
 
     console.log(`Added ${defaultSnippets.length} default snippets`);
 
-    // Track analytics if available
-    if (analytics) {
-      for (let i = 0; i < defaultSnippets.length; i++) {
-        await analytics.trackSnippetCreated(i + 1);
-      }
+    // Track analytics if available - send as single batch event
+    if (analytics && analytics.trackSnippetCreated) {
+      await analytics.trackSnippetCreated(defaultSnippets.length, 'default');
     }
 
   } catch (error) {

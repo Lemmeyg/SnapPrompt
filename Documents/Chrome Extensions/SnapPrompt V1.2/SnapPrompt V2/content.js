@@ -5,13 +5,11 @@ if (window.pocketPromptInitialized) {
   // console.log('Pocket Prompt already initialized, skipping...'); // Removed for brevity
 } else {
   window.pocketPromptInitialized = true;
-  
+
   // Store the last focused element for text insertion
   let lastFocusedElement = null;
   let lastCursorPosition = null;
   let contextMenuTarget = null;
-
-  console.log('Pocket Prompt content script loaded on:', window.location.href);
 
   // Enhanced event listeners for better element tracking
   document.addEventListener('focusin', (event) => {

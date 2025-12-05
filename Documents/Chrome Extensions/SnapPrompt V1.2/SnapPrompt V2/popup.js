@@ -13,22 +13,15 @@ class StorageMigrationManager {
             const versionResult = await chrome.storage.sync.get([this.versionKey]);
             const storedVersion = versionResult[this.versionKey] || '1.0.0';
 
-            console.log(`Current version: ${this.currentVersion}, Stored version: ${storedVersion}`);
-
             // Don't run migration on fresh install
             if (!versionResult[this.versionKey]) {
-                console.log('Fresh install detected, skipping migration');
                 await chrome.storage.sync.set({ [this.versionKey]: this.currentVersion });
                 return;
             }
 
             if (storedVersion !== this.currentVersion) {
-                console.log('Migration needed, starting migration process...');
                 await this.performMigration(storedVersion, this.currentVersion);
                 await chrome.storage.sync.set({ [this.versionKey]: this.currentVersion });
-                console.log('Migration completed successfully');
-            } else {
-                console.log('No migration needed');
             }
         } catch (error) {
             console.error('Migration error:', error);
@@ -42,15 +35,12 @@ class StorageMigrationManager {
     }
 
     async migrateTo110(fromVersion) {
-        console.log(`Migrating from ${fromVersion} to 1.1.0`);
-
         try {
             let snippets = await this.getDataFromMultipleSources();
 
             if (snippets && snippets.length > 0) {
                 snippets = this.validateAndCleanSnippets(snippets);
                 await chrome.storage.sync.set({ [this.storageKey]: snippets });
-                console.log(`Successfully migrated ${snippets.length} snippets`);
             }
         } catch (error) {
             console.error('Migration to 1.1.0 failed:', error);
@@ -64,22 +54,20 @@ class StorageMigrationManager {
         try {
             const syncResult = await chrome.storage.sync.get([this.storageKey]);
             if (syncResult[this.storageKey]?.length > 0) {
-                console.log(`Found ${syncResult[this.storageKey].length} snippets in sync storage`);
                 allSnippets = [...allSnippets, ...syncResult[this.storageKey]];
             }
         } catch (error) {
-            console.log('Sync storage failed, trying local storage...');
+            // Try local storage as fallback
         }
 
         // Try local storage as fallback
         try {
             const localResult = await chrome.storage.local.get([this.storageKey]);
             if (localResult[this.storageKey]?.length > 0) {
-                console.log(`Found ${localResult[this.storageKey].length} snippets in local storage`);
                 allSnippets = [...allSnippets, ...localResult[this.storageKey]];
             }
         } catch (error) {
-            console.log('Local storage also failed');
+            // Continue to alternatives
         }
 
         // Try alternative keys
@@ -88,7 +76,6 @@ class StorageMigrationManager {
             try {
                 const result = await chrome.storage.sync.get([key]);
                 if (result[key]?.length > 0) {
-                    console.log(`Found ${result[key].length} snippets in alternative key: ${key}`);
                     allSnippets = [...allSnippets, ...result[key]];
                 }
             } catch (error) {
@@ -158,22 +145,32 @@ class SnapPromptManager {
 
         // Easter egg milestones (minutes saved) - customize these messages!
         this.easterEggs = [
-            { minutes: 5, message: '🌟 Nice start!' },
-            { minutes: 30, message: '🚀 You\'re on a roll!' },
-            { minutes: 60, message: '⭐ That\'s an hour saved!' },
-            { minutes: 120, message: '🏆 Productivity champion!' },
-            { minutes: 300, message: '💎 5 hours saved - incredible!' },
-            { minutes: 600, message: '👑 10 hours saved - you\'re a legend!' },
-            { minutes: 1440, message: '🎉 A full day saved - amazing!' }
+            { minutes: 3, message: 'You saved enough time to boil the perfect soft-boiled egg', link: 'https://en.wikipedia.org/wiki/Boiled_egg' },
+            { minutes: 8, message: 'You saved enough time to run a mile at world record pace', link: 'https://en.wikipedia.org/wiki/Mile_run_world_record_progression' },
+            { minutes: 18, message: 'You saved enough time to experience a complete lunar eclipse from start to finish', link: 'https://en.wikipedia.org/wiki/Lunar_eclipse' },
+            { minutes: 37, message: 'You saved enough time to listen to Mozart\'s Requiem in its entirety', link: 'https://en.wikipedia.org/wiki/Requiem_(Mozart)' },
+            { minutes: 75, message: 'You saved enough time to watch the entire Wizard of Oz', link: 'https://en.wikipedia.org/wiki/The_Wizard_of_Oz_(1939_film)' },
+            { minutes: 143, message: 'You saved enough time to wait for Old Faithful geyser to erupt 20 times', link: 'https://en.wikipedia.org/wiki/Old_Faithful' },
+            { minutes: 210, message: 'You saved enough time to fly from New York to Los Angeles', link: 'https://en.wikipedia.org/wiki/Transcontinental_flight' },
+            { minutes: 302, message: 'You saved enough time to play Wagner\'s complete Das Rheingold', link: 'https://en.wikipedia.org/wiki/Das_Rheingold' },
+            { minutes: 398, message: 'You saved enough time to walk the entire length of the National Mall in Washington DC 10 times', link: 'https://en.wikipedia.org/wiki/National_Mall' },
+            { minutes: 577, message: 'You saved enough time to hike to the summit of Mount Fuji', link: 'https://en.wikipedia.org/wiki/Mount_Fuji' },
+            { minutes: 720, message: 'You saved enough time to complete the traditional Korean kimchi-making process', link: 'https://en.wikipedia.org/wiki/Kimchi' },
+            { minutes: 836, message: 'You saved enough time to experience a complete day-night cycle on Mars', link: 'https://en.wikipedia.org/wiki/Timekeeping_on_Mars' },
+            { minutes: 1043, message: 'You saved enough time to fly from New York to Singapore on the world\'s longest direct commercial flight', link: 'https://en.wikipedia.org/wiki/Longest_flights' },
+            { minutes: 1305, message: 'You saved enough time to witness a complete rotation of the Earth at the North Pole during summer solstice', link: 'https://en.wikipedia.org/wiki/Midnight_sun' },
+            { minutes: 1440, message: 'You saved enough time to participate in the 24 Hours of Le Mans race', link: 'https://en.wikipedia.org/wiki/24_Hours_of_Le_Mans' }
         ];
         this.editingSnappromptId = null;
         this.migrationManager = new StorageMigrationManager();
         this.analytics = null;
         this.draggedElement = null;
         this.tooltipTimeout = null;
+        this.toastTimeout = null;
         this.isDragging = false;
         this.lastMouseX = 0;
         this.lastMouseY = 0;
+        this.popupOpenTime = Date.now(); // Track session start
 
         // Initialize
         this.initializeElements();
@@ -197,6 +194,7 @@ class SnapPromptManager {
         // UI elements
         this.toast = document.getElementById('toast');
         this.toastMessage = document.getElementById('toastMessage');
+        this.toastClose = document.getElementById('toastClose');
         this.labelError = document.getElementById('labelError');
         this.textError = document.getElementById('textError');
 
@@ -257,6 +255,9 @@ class SnapPromptManager {
         // What's New banner
         this.whatsNewClose.addEventListener('click', () => this.dismissWhatsNew());
 
+        // Toast close button
+        this.toastClose.addEventListener('click', () => this.hideToast());
+
         // Tooltip overlay
         this.tooltipClose.addEventListener('click', () => this.hideTooltip());
         this.tooltipOverlay.addEventListener('click', (e) => {
@@ -280,8 +281,14 @@ class SnapPromptManager {
                 await this.analytics.initialize();
                 await this.analytics.trackPopupOpened();
 
-                window.addEventListener('beforeunload', async () => {
-                    await this.analytics.trackPopupClosed();
+                window.addEventListener('beforeunload', () => {
+                    const sessionDuration = Date.now() - this.popupOpenTime;
+                    // Round to nearest 5 seconds for privacy
+                    const roundedDuration = Math.round(sessionDuration / 5000) * 5000;
+                    // Use synchronous flush for popup close
+                    if (this.analytics.eventQueue && this.analytics.eventQueue.length > 0) {
+                        this.analytics.flushEventsSync();
+                    }
                 });
             } else {
                 // Dummy analytics
@@ -359,9 +366,8 @@ class SnapPromptManager {
 
             if (result.capturedText) {
                 this.textInput.value = result.capturedText;
-                this.labelInput.focus();
-                this.showToast('Text captured! Please provide a label.', 'info');
                 this.openForm();
+                this.labelInput.focus();
                 await chrome.storage.local.remove(['capturedText', 'captureTimestamp']);
             }
         } catch (error) {
@@ -373,7 +379,6 @@ class SnapPromptManager {
         try {
             const result = await chrome.storage.sync.get([this.migrationManager.storageKey]);
             this.Snapprompts = result[this.migrationManager.storageKey] || [];
-            console.log(`Loaded ${this.Snapprompts.length} snippets`);
             this.renderSnippets();
         } catch (error) {
             console.error('Error loading snippets:', error);
@@ -388,7 +393,6 @@ class SnapPromptManager {
                 chrome.storage.sync.set({ [this.migrationManager.storageKey]: this.Snapprompts }),
                 chrome.storage.local.set({ [this.migrationManager.storageKey]: this.Snapprompts })
             ]);
-            console.log('Snippets saved successfully');
         } catch (error) {
             console.error('Error saving snippets:', error);
             throw error;
@@ -450,8 +454,14 @@ class SnapPromptManager {
             );
 
             if (milestone) {
-                this.showToast(milestone.message, 'success');
+                // Show persistent toast with link for easter eggs
+                this.showToast(milestone.message, 'success', milestone.link, true);
                 await chrome.storage.sync.set({ lastEasterEggMinutes: milestone.minutes });
+            }
+
+            // Check for analytics keystroke milestones
+            if (this.analytics && this.analytics.enabled && this.analytics.checkKeystrokeMilestone) {
+                await this.analytics.checkKeystrokeMilestone(newTotal);
             }
         } catch (error) {
             console.error('Error tracking keystroke savings:', error);
@@ -690,14 +700,15 @@ class SnapPromptManager {
             this.showToast('Copied to clipboard!', 'success');
 
             if (this.analytics) {
-                await this.analytics.trackSnippetCopied(true);
+                const position = this.Snapprompts.indexOf(snippet) + 1;
+                await this.analytics.trackSnippetCopied(true, position);
             }
         } catch (error) {
             console.error('Error copying to clipboard:', error);
             this.showToast('Failed to copy', 'error');
 
             if (this.analytics) {
-                await this.analytics.trackSnippetCopied(false);
+                await this.analytics.trackSnippetCopied(false, 0);
             }
         }
     }
@@ -888,8 +899,32 @@ class SnapPromptManager {
         this.SnappromptCount.textContent = `${this.Snapprompts.length}/10`;
     }
 
-    showToast(message, type = 'success') {
-        this.toastMessage.textContent = message;
+    showToast(message, type = 'success', link = null, persistent = false) {
+        // Clear any existing timeout
+        if (this.toastTimeout) {
+            clearTimeout(this.toastTimeout);
+            this.toastTimeout = null;
+        }
+
+        // Clear previous content
+        this.toastMessage.innerHTML = '';
+
+        // Add message text
+        const textNode = document.createTextNode(message);
+        this.toastMessage.appendChild(textNode);
+
+        // Add link if provided
+        if (link) {
+            const linkElement = document.createElement('a');
+            linkElement.href = link;
+            linkElement.target = '_blank';
+            linkElement.textContent = ' Learn more';
+            linkElement.style.marginLeft = '4px';
+            linkElement.style.color = 'var(--accent)';
+            linkElement.style.textDecoration = 'underline';
+            linkElement.style.fontWeight = '500';
+            this.toastMessage.appendChild(linkElement);
+        }
 
         // Remove any existing type classes
         this.toast.classList.remove('toast-success', 'toast-error', 'toast-info');
@@ -898,9 +933,21 @@ class SnapPromptManager {
         this.toast.classList.add(`toast-${type}`);
         this.toast.classList.add('show');
 
-        setTimeout(() => {
-            this.toast.classList.remove('show');
-        }, 3000);
+        // Only auto-hide if not persistent
+        if (!persistent) {
+            const displayTime = 3000;
+            this.toastTimeout = setTimeout(() => {
+                this.hideToast();
+            }, displayTime);
+        }
+    }
+
+    hideToast() {
+        this.toast.classList.remove('show');
+        if (this.toastTimeout) {
+            clearTimeout(this.toastTimeout);
+            this.toastTimeout = null;
+        }
     }
 
     // Settings menu handlers
@@ -969,7 +1016,7 @@ class SnapPromptManager {
 
     async handleReadme() {
         try {
-            const readmePath = chrome.runtime.getURL('USER_GUIDE.md');
+            const readmePath = chrome.runtime.getURL('README.html');
             await chrome.tabs.create({
                 url: readmePath,
                 active: true
@@ -1022,6 +1069,11 @@ class SnapPromptManager {
 
             this.settingsDropdown.classList.remove('show');
             this.showToast('Prompts exported!', 'success');
+
+            // Track export
+            if (this.analytics) {
+                this.analytics.trackSnippetsExported(this.Snapprompts.length, this.Snapprompts.length);
+            }
         } catch (error) {
             console.error('Export error:', error);
             this.showToast('Export failed', 'error');
@@ -1061,6 +1113,11 @@ class SnapPromptManager {
                         await this.saveSnippets();
                         this.renderSnippets();
                         this.showToast(`Imported ${newSnippets.length} prompts!`, 'success');
+
+                        // Track import
+                        if (this.analytics) {
+                            this.analytics.trackSnippetsImported(newSnippets.length, this.Snapprompts.length);
+                        }
                     } else {
                         this.showToast('No new prompts to import', 'info');
                     }
