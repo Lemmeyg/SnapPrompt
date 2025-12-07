@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SnapPrompt - User Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* Reset & Base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      /* Background colors */
+      --background: #0a0a0a;
+      --background-secondary: #141414;
+      --background-tertiary: #1a1a1a;
+
+      /* Border colors */
+      --border: #262626;
+      --border-hover: #404040;
+
+      /* Text colors */
+      --foreground: #fafafa;
+      --foreground-secondary: #a1a1a1;
+      --foreground-muted: #737373;
+
+      /* Accent colors */
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-muted: rgba(59, 130, 246, 0.1);
+
+      /* Semantic colors */
+      --success: #22c55e;
+
+      /* Spacing */
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    /* Light theme */
+    body.light-theme {
+      --background: #ffffff;
+      --background-secondary: #f8fafc;
+      --background-tertiary: #f1f5f9;
+      --border: #e2e8f0;
+      --border-hover: #cbd5e1;
+      --foreground: #0f172a;
+      --foreground-secondary: #475569;
+      --foreground-muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-muted: rgba(59, 130, 246, 0.08);
+      --success: #10b981;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: auto;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--foreground);
+      background: var(--background);
+      font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 48px 32px;
+    }
+
+    .header {
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--foreground);
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .version {
+      display: inline-block;
+      background: var(--accent-muted);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid var(--accent);
+    }
+
+    .intro {
+      color: var(--foreground-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-top: 20px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--foreground);
+      margin-top: 48px;
+      margin-bottom: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .feature-list {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .feature {
+      background: var(--background-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      transition: all 0.2s ease;
+    }
+
+    .feature:hover {
+      border-color: var(--border-hover);
+      background: var(--background-tertiary);
+    }
+
+    .feature-title {
+      font-weight: 600;
+      color: var(--foreground);
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .feature-description {
+      color: var(--foreground-secondary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    kbd {
+      background: var(--background-tertiary);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      font-family: 'Inter', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--foreground);
+    }
+
+    code {
+      background: var(--background-tertiary);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      font-family: 'Inter', monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .guide-section {
+      margin-bottom: 24px;
+    }
+
+    .guide-item {
+      margin-bottom: 16px;
+    }
+
+    .guide-label {
+      font-weight: 500;
+      color: var(--foreground);
+      margin-bottom: 4px;
+    }
+
+    .guide-text {
+      color: var(--foreground-secondary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    li {
+      color: var(--foreground-secondary);
+      padding: 8px 0;
+      padding-left: 24px;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    li::before {
+      content: "•";
+      color: var(--accent);
+      font-weight: bold;
+      position: absolute;
+      left: 8px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
+
+    .support-section {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .support-text {
+      color: var(--foreground-secondary);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>SnapPrompt User Guide</h1>
+      <span class="version">Version 1.4.0</span>
+      <p class="intro">SnapPrompt is a text snippet management extension designed to streamline your workflow by allowing you to quickly save, insert and organize frequently used text into any text field across the web. The extension is ideal for managing common replies, email signatures, AI prompts, code snippets, and other repetitive text inputs.</p>
+    </div>
+
+    <section class="section">
+      <h2>Key Features</h2>
+      <div class="feature-list">
+        <div class="feature">
+          <div class="feature-title">Clipboard Copy Functionality</div>
+          <div class="feature-description">Each saved snippet includes a dedicated copy button that transfers the text directly to your clipboard without inserting it into a text field. This feature provides universal compatibility with applications outside the browser, including desktop software, email clients, and document editors.</div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-title">Keyboard Shortcut Integration</div>
+          <div class="feature-description">Configure keyboard shortcuts (<kbd>Ctrl+Shift+1</kbd> through <kbd>Ctrl+Shift+4</kbd>) to instantly insert your most frequently used snippets within Chrome. Shortcuts are assigned to the first four snippets in alphabetical order and can be customized through Chrome's extension shortcuts interface at <code>chrome://extensions/shortcuts</code>. For use in other applications, use the copy button to transfer snippets to your clipboard.</div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-title">Context Menu Text Capture</div>
+          <div class="feature-description">Select text on any webpage, access the browser context menu, and choose the "Save in SnapPrompt" option to create a new snippet instantly. This feature eliminates the need to manually copy and paste text into the extension interface.</div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-title">Productivity Analytics</div>
+          <div class="feature-description">The extension automatically tracks the number of keystrokes saved through snippet usage and converts this data into estimated time savings. Achievement milestones are displayed at specific intervals to provide insight into your productivity improvements.</div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-title">Theme Customization</div>
+          <div class="feature-description">Toggle between professional dark and light interface themes through the settings menu. Both themes feature rounded corners, smooth animations, and carefully selected color palettes designed for extended use and visual comfort.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Getting Started</h2>
+      <div class="guide-section">
+        <div class="guide-item">
+          <div class="guide-label">Creating Snippets</div>
+          <div class="guide-text">Click the SnapPrompt extension icon in your browser toolbar to open the management interface. Enter a descriptive label and the desired text content, then click the "Save Prompt" button. The extension supports up to ten saved snippets at any given time.</div>
+        </div>
+
+        <div class="guide-item">
+          <div class="guide-label">Using Snippets</div>
+          <div class="guide-text">Snippets can be inserted into text fields through multiple methods: selecting from the browser context menu, using configured keyboard shortcuts (<kbd>Ctrl+Shift+1</kbd> through <kbd>Ctrl+Shift+4</kbd>), or clicking the copy button for clipboard-based insertion into any application.</div>
+        </div>
+
+        <div class="guide-item">
+          <div class="guide-label">Managing Your Collection</div>
+          <div class="guide-text">Hover over any snippet to reveal the edit and delete action buttons. Snippets can be reordered through drag-and-drop functionality to prioritize frequently used items. Click on any snippet to view its complete text content in an expanded overlay view.</div>
+        </div>
+
+        <div class="guide-item">
+          <div class="guide-label">Data Portability</div>
+          <div class="guide-text">Access the Import and Export functions through the settings menu to create backup copies of your snippet collection. Exported data is saved in JSON format and can be imported on other devices or browsers to synchronize your snippet library.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Version 1.4.0 Release Notes</h2>
+      <ul>
+        <li>Complete interface redesign featuring a modern aesthetic with 16-pixel rounded corners, refined animations, and Inter typeface integration for improved readability and professional appearance.</li>
+        <li>Implemented animated logo element that rotates on initial load and continues to rotate at eight-second intervals, adding subtle visual interest to the interface.</li>
+        <li>Enhanced update notification system that intelligently displays version announcements only when actual version changes occur, preventing redundant notifications during extension reloads.</li>
+        <li>Resolved analytics initialization errors related to service worker context limitations and improved notification state management for more reliable extension behavior.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>Best Practices</h2>
+      <ul>
+        
+        <li>Utilize the clipboard copy functionality when working with applications outside the browser environment where direct text insertion is not available.</li>
+        <li>Consider switching between light and dark themes based on your working environment and time of day to reduce eye strain during extended usage.</li>
+        <li>Create regular backups of your snippet collection using the export functionality to prevent data loss during browser updates or system changes.</li>
+      </ul>
+    </section>
+
+    <div class="support-section">
+      <p class="support-text">For technical support, feature requests, or to report issues, please use the "Feedback" option in the extension settings menu  </p>
+    </div>
+  </div>
+</body>
+</html>
